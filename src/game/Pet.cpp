@@ -1081,9 +1081,9 @@ bool Pet::InitStatsForLevel(uint32 petlevel, Unit* owner)
 
     SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, float(petlevel * 50));
 
-    SetAttackTime(BASE_ATTACK, BASE_ATTACK_TIME);
-    SetAttackTime(OFF_ATTACK, BASE_ATTACK_TIME);
-    SetAttackTime(RANGED_ATTACK, BASE_ATTACK_TIME);
+    SetAttackTime(BASE_ATTACK, cinfo->MeleeBaseAttackTime);
+    SetAttackTime(OFF_ATTACK, cinfo->MeleeBaseAttackTime);
+    SetAttackTime(RANGED_ATTACK, cinfo->RangedBaseAttackTime);
 
     SetFloatValue(UNIT_MOD_CAST_SPEED, 1.0);
 
@@ -1148,8 +1148,10 @@ bool Pet::InitStatsForLevel(uint32 petlevel, Unit* owner)
                 }
             }
 
-            SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, float(petlevel - (petlevel / 4)));
-            SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, float(petlevel + (petlevel / 4)));
+            //SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, float(petlevel - (petlevel / 4)));
+            //SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, float(petlevel + (petlevel / 4)));
+			SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, float( 0.5*GetAttackTime(BASE_ATTACK)*(petlevel - (petlevel / 4))/1000 ) );
+			SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, float( 0.5*GetAttackTime(BASE_ATTACK)*(petlevel + (petlevel / 4))/1000 ) );
 
             // SetModifierValue(UNIT_MOD_ATTACK_POWER, BASE_VALUE, float(cinfo->attackpower));
 
