@@ -3770,6 +3770,7 @@ void Spell::EffectSanctuary(SpellEffectIndex /*eff_idx*/)
         return;
     // unitTarget->CombatStop();
 
+	/*
 	std::list<Unit*> targets;
 	MaNGOS::AnyUnfriendlyUnitInObjectRangeCheck u_check(unitTarget, m_caster->GetMap()->GetVisibilityDistance());
 	MaNGOS::UnitListSearcher<MaNGOS::AnyUnfriendlyUnitInObjectRangeCheck> searcher(targets, u_check);
@@ -3786,6 +3787,7 @@ void Spell::EffectSanctuary(SpellEffectIndex /*eff_idx*/)
 				(*iter)->InterruptSpell(CurrentSpellTypes(CurrentSpellTypes(i)), false);
 		}
 	}
+	*/
 
 	unitTarget->CombatStop();
     unitTarget->getHostileRefManager().deleteReferences();  // stop all fighting
