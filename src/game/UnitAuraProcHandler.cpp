@@ -1381,8 +1381,8 @@ SpellAuraProcResult Unit::HandleRemoveByDamageChanceProc(Unit* pVictim, uint32 d
 		int dt = pVictim->getLevel() - getLevel();
 		if (dt >= 0)
 			chance = 5.0f;
-		else if (dt >= -4)
-			chance = 20.0f;
+		else if (dt >= -6 && dt < 0)
+			chance = 5.0f * (-dt) + 1.25f;
 	}
     if (roll_chance_f(chance))
     {
