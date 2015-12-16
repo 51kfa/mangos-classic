@@ -4414,7 +4414,7 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
     bool isPrevInLiquid = false;
 
     // falling case
-    if (!unitTarget->GetMap()->GetHeightInRange(prevPos.x, prevPos.y, groundZ, 3.0f) && unitTarget->m_movementInfo.HasMovementFlag(MOVEFLAG_FALLING))
+	if (!unitTarget->GetMap()->GetLeapForwardHeight(prevPos.x, prevPos.y, groundZ, 3.0f) && unitTarget->m_movementInfo.HasMovementFlag(MOVEFLAG_FALLING))
     {
         nextPos.x = prevPos.x + dist * cos(orientation);
         nextPos.y = prevPos.y + dist * sin(orientation);
@@ -4430,7 +4430,7 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
         else
         {
             // fix z to ground if near of it
-            unitTarget->GetMap()->GetHeightInRange(nextPos.x, nextPos.y, nextPos.z, 10.0f);
+			unitTarget->GetMap()->GetLeapForwardHeight(nextPos.x, nextPos.y, nextPos.z, 10.0f);
         }
 
         // check any obstacle and fix coords
@@ -4473,7 +4473,7 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
         GridMapLiquidData liquidData;
 
         // try fix height for next position
-        if (!unitTarget->GetMap()->GetHeightInRange(nextPos.x, nextPos.y, nextPos.z))
+		if (!unitTarget->GetMap()->GetLeapForwardHeight(nextPos.x, nextPos.y, nextPos.z))
         {
             // we cant so test if we are on water
             if (!unitTarget->GetMap()->GetTerrain()->IsInWater(nextPos.x, nextPos.y, nextPos.z, &liquidData))
@@ -4510,7 +4510,7 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
             isInLiquid = true;
 
             float ground = nextPos.z;
-            if (unitTarget->GetMap()->GetHeightInRange(nextPos.x, nextPos.y, ground))
+			if (unitTarget->GetMap()->GetLeapForwardHeight(nextPos.x, nextPos.y, ground))
             {
                 if (nextPos.z < ground)
                 {
@@ -4552,6 +4552,15 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
         isPrevInLiquid = isInLiquid;
         prevPos = nextPos;
     }
+
+	uint32 UnitAreaId = unitTarget->GetAreaId();
+	if (UnitAreaId == 1497)
+	{
+		uint32 zoneId, areaId;
+		sTerrainMgr.LoadTerrain(unitTarget->GetMapId())->GetZoneAndAreaId(zoneId, areaId, nextPos.x, nextPos.y, nextPos.z);
+		if (areaId != UnitAreaId)
+			return;
+	}
 
     unitTarget->NearTeleportTo(nextPos.x, nextPos.y, nextPos.z, orientation, unitTarget == m_caster);
 }
@@ -4668,13 +4677,10 @@ void Spell::EffectCharge(SpellEffectIndex /*eff_idx*/)
     unitTarget->GetContactPoint(m_caster, x, y, z, 3.666666f);
 	float dx = unitTarget->GetPositionX() - x;
 	float dy = unitTarget->GetPositionY() - y;
-	float dz = unitTarget->GetPositionZ() - z;
 	if (abs(dx) > 1)
 		x += dx / 2;
 	if (abs(dy) > 1)
 		y += dy / 2;
-	if (abs(dz) > 1)
-		z += dz / 2;
 
     if (unitTarget->GetTypeId() != TYPEID_PLAYER)
         ((Creature*)unitTarget)->StopMoving();
