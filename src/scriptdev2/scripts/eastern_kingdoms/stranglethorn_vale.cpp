@@ -120,9 +120,9 @@ enum
 	END_SLEEPING = 5     // 5 = 5am
 };
 
-struct mob_sleeping_creature : public ScriptedAI
+struct mob_sleepAI : public ScriptedAI
 {
-	mob_sleeping_creature(Creature* pCreature):ScriptedAI(pCreature){Reset();}
+	mob_sleepAI(Creature* pCreature):ScriptedAI(pCreature){Reset();}
 	uint16 uSleepTime;
 	float fSpawnPositionX;
 	float fSpawnPositionY;
@@ -136,11 +136,11 @@ struct mob_sleeping_creature : public ScriptedAI
 		fSpawnPositionZ = m_creature->GetPositionZ();
 	}
 
-	void UpdateAI(const uint32 uiDiff)
+	void UpdateAI(const uint32 uiDiff) override
 	{
 		if (!m_creature->isInCombat())
 		{
-			time_t t = sWorld.GetGameTime();
+			time_t t = time(NULL);//sWorld.GetGameTime();
 			struct tm *tmp = gmtime(&t);
 			if (tmp->tm_hour >= START_SLEEPING || tmp->tm_hour < END_SLEEPING)
 			{
@@ -182,22 +182,21 @@ struct mob_sleeping_creature : public ScriptedAI
 				else
 					uSleepTime -= uiDiff;
 			}
-
-			if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
-				return;
-			m_creature->GetMotionMaster()->MoveChase(m_creature->getVictim());
-			if (m_creature->isAttackReady())
-			{
-				DoMeleeAttackIfReady();
-				m_creature->resetAttackTimer();
-			}
+		}
+		if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
+			return;
+		m_creature->GetMotionMaster()->MoveChase(m_creature->getVictim());
+		if (m_creature->isAttackReady())
+		{
+			DoMeleeAttackIfReady();
+			m_creature->resetAttackTimer();
 		}
 	}
 };
 
-CreatureAI* GetAI_CreatureSleep(Creature* pCreature)
+CreatureAI* GetAI_CreatureSleep(Creature* _Creature)
 {
-	return new mob_sleeping_creature(pCreature);
+	return new mob_sleepAI(_Creature);
 }
 
 void AddSC_stranglethorn_vale()

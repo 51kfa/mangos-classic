@@ -4402,6 +4402,7 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
 {
     float dist = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[eff_idx]));
     const float IN_OR_UNDER_LIQUID_RANGE = 0.8f;                // range to make player under liquid or on liquid surface from liquid level
+	uint32 UnitAreaId = unitTarget->GetAreaId();
 
     G3D::Vector3 prevPos, nextPos;
     float orientation = unitTarget->GetOrientation();
@@ -4414,7 +4415,7 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
     bool isPrevInLiquid = false;
 
     // falling case
-	if (!unitTarget->GetMap()->GetLeapForwardHeight(prevPos.x, prevPos.y, groundZ, 3.0f) && unitTarget->m_movementInfo.HasMovementFlag(MOVEFLAG_FALLING))
+	if (!unitTarget->GetMap()->GetLeapForwardHeight(UnitAreaId, prevPos.x, prevPos.y, groundZ, 3.0f) && unitTarget->m_movementInfo.HasMovementFlag(MOVEFLAG_FALLING))
     {
         nextPos.x = prevPos.x + dist * cos(orientation);
         nextPos.y = prevPos.y + dist * sin(orientation);
@@ -4430,7 +4431,7 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
         else
         {
             // fix z to ground if near of it
-			unitTarget->GetMap()->GetLeapForwardHeight(nextPos.x, nextPos.y, nextPos.z, 10.0f);
+			unitTarget->GetMap()->GetLeapForwardHeight(UnitAreaId, nextPos.x, nextPos.y, nextPos.z, 10.0f);
         }
 
         // check any obstacle and fix coords
@@ -4473,7 +4474,7 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
         GridMapLiquidData liquidData;
 
         // try fix height for next position
-		if (!unitTarget->GetMap()->GetLeapForwardHeight(nextPos.x, nextPos.y, nextPos.z))
+		if (!unitTarget->GetMap()->GetLeapForwardHeight(UnitAreaId, nextPos.x, nextPos.y, nextPos.z))
         {
             // we cant so test if we are on water
             if (!unitTarget->GetMap()->GetTerrain()->IsInWater(nextPos.x, nextPos.y, nextPos.z, &liquidData))
@@ -4510,7 +4511,7 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
             isInLiquid = true;
 
             float ground = nextPos.z;
-			if (unitTarget->GetMap()->GetLeapForwardHeight(nextPos.x, nextPos.y, ground))
+			if (unitTarget->GetMap()->GetLeapForwardHeight(UnitAreaId, nextPos.x, nextPos.y, ground))
             {
                 if (nextPos.z < ground)
                 {
@@ -4553,7 +4554,6 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
         prevPos = nextPos;
     }
 
-	uint32 UnitAreaId = unitTarget->GetAreaId();
 	if (UnitAreaId == 1497)
 	{
 		uint32 zoneId, areaId;
