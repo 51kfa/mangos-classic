@@ -4681,16 +4681,18 @@ void Spell::EffectCharge(SpellEffectIndex /*eff_idx*/)
 		x += dx / 2;
 	if (abs(dy) > 1)
 		y += dy / 2;
+	float height = m_caster->GetMap()->GetHeight(x, y, unitTarget->GetPositionZ());
+	z = z > height ? z : height;
+	m_caster->SetLastNormalHeight(z);
 
     if (unitTarget->GetTypeId() != TYPEID_PLAYER)
         ((Creature*)unitTarget)->StopMoving();
 
+	if (unitTarget != m_caster && !IsPositiveSpell(m_spellInfo->Id))
+		m_caster->Attack(unitTarget, true);
+
     // Only send MOVEMENTFLAG_WALK_MODE, client has strange issues with other move flags
     m_caster->MonsterMoveWithSpeed(x, y, z, 24.f, true, true);
-
-    // not all charge effects used in negative spells
-    if (unitTarget != m_caster && !IsPositiveSpell(m_spellInfo->Id))
-        m_caster->Attack(unitTarget, true);
 }
 
 void Spell::EffectSummonCritter(SpellEffectIndex eff_idx)

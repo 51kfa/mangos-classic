@@ -2525,6 +2525,11 @@ void Spell::prepare(SpellCastTargets const* targets, Aura* triggeredByAura)
         }
         SendCastResult(result);
         finish(false);
+		if (result == SPELL_FAILED_LINE_OF_SIGHT && m_caster->GetTypeId() == TYPEID_UNIT)
+		{
+			if (Unit* pTarget = m_targets.getUnitTarget())
+				m_caster->GetMotionMaster()->MoveChase(pTarget, m_caster->GetCombatDistance(pTarget, false));
+		}
         return;
     }
 

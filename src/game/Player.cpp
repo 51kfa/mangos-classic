@@ -5027,7 +5027,7 @@ void Player::UpdateCombatSkills(Unit* pVictim, WeaponAttackType attType, bool de
     if (moblevel > plevel + 5)
         moblevel = plevel + 5;
 
-    uint32 lvldif = moblevel - greylevel;
+    uint32 lvldif = abs(int(moblevel - greylevel));
     if (lvldif < 3)
         lvldif = 3;
 
@@ -5036,7 +5036,7 @@ void Player::UpdateCombatSkills(Unit* pVictim, WeaponAttackType attType, bool de
     // Max skill reached for level.
     // Can in some cases be less than 0: having max skill and then .level -1 as example.
     if (skilldif <= 0)
-        return;
+        skilldif = 3;
 
     float chance = float(3 * lvldif * skilldif) / plevel;
     if (!defence)
