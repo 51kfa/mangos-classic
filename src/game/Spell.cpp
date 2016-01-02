@@ -1048,6 +1048,9 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
                 !m_spellInfo->HasAttribute(SPELL_ATTR_STOP_ATTACK_TARGET))
             ((Player*)m_caster)->CastItemCombatSpell(unitTarget, m_attackType);
 
+		if (caster->GetObjectGuid().IsPlayer())
+			((Player*)caster)->GetAntiCheat()->DoAntiCheatCheck(CHECK_DAMAGE_SPELL, m_spellInfo->Id, 0, damageInfo.damage);
+
         caster->DealSpellDamage(&damageInfo, true);
 
         // Bloodthirst
@@ -3693,6 +3696,62 @@ void Spell::TakePower()
 
     Powers powerType = Powers(m_spellInfo->powerType);
 
+	if (m_spellInfo->Id == 5209)
+	{
+		m_caster->ModifyPower(powerType, -(int32)m_powerCost);
+		return;
+	}
+	switch (m_spellInfo->SpellFamilyName)
+	{
+		case SPELLFAMILY_WARRIOR:
+			{
+				if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x400000)
+						|| m_spellInfo->SpellFamilyFlags & UI64LIT(0x20000)
+						|| m_spellInfo->SpellFamilyFlags & UI64LIT(0x80)
+						|| m_spellInfo->Id == 1680
+						|| m_spellInfo->Id == 12323
+						|| m_spellInfo->Id == 1161)
+				{
+					m_caster->ModifyPower(powerType, -(int32)m_powerCost);
+					return;
+				}
+			}
+			break;
+		case SPELLFAMILY_DRUID:
+			{
+				if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x800)
+						|| m_spellInfo->SpellFamilyFlags & UI64LIT(0x8))
+				{
+					m_caster->ModifyPower(powerType, -(int32)m_powerCost);
+					return;
+				}
+			}
+			break;
+	}
+	bool hit = true;
+	if (m_caster->GetTypeId() == TYPEID_PLAYER)
+	{
+		if (powerType == POWER_RAGE || powerType == POWER_ENERGY)
+			if (ObjectGuid targetGUID = m_targets.getUnitTargetGuid())
+				for (std::list<TargetInfo>::iterator ihit= m_UniqueTargetInfo.begin(); ihit != m_UniqueTargetInfo.end(); ++ihit)
+					if (ihit->targetGUID == targetGUID)
+					{
+						if (ihit->missCondition != SPELL_MISS_NONE)
+						{
+							hit = false;
+							if (Player* modOwner = m_caster->GetSpellModOwner())
+							{
+								modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_SPELL_COST_REFUND_ON_FAIL, m_powerCost);
+							}
+							break;
+						}
+					}
+	}
+	if (hit || m_spellInfo->AttributesEx & SPELL_ATTR_EX_REQ_TARGET_COMBO_POINTS || m_spellInfo->AttributesEx & SPELL_ATTR_EX_REQ_COMBO_POINTS)
+		m_caster->ModifyPower(powerType, -(int32)m_powerCost);
+	else
+		m_caster->ModifyPower(powerType, -(int32)m_powerCost/5);
+
     m_caster->ModifyPower(powerType, -(int32)m_powerCost);
 
     // Set the five second timer
@@ -4082,6 +4141,10 @@ SpellCastResult Spell::CheckCast(bool strict)
             if (m_spellInfo->SpellFamilyName == SPELLFAMILY_WARLOCK &&
                     m_spellInfo->SpellIconID == 16)
                 return SPELL_FAILED_BAD_TARGETS;
+
+			if (m_spellInfo->SpellFamilyName == SPELLFAMILY_MAGE &&
+					m_spellInfo->SpellIconID == 225)
+				return SPELL_FAILED_BAD_TARGETS;
         }
 
         // check pet presents
@@ -4194,6 +4257,11 @@ SpellCastResult Spell::CheckCast(bool strict)
                 return SPELL_FAILED_NOT_BEHIND;
             }
         }
+		if (m_spellInfo->SpellIconID == 243 && target->HasInArc(M_PI_F, m_caster))
+		{
+			SendInterrupted(2);
+			return SPELL_FAILED_NOT_BEHIND;
+		}
 
         // Target must be facing you.
         if ((m_spellInfo->Attributes == (SPELL_ATTR_UNK4 | SPELL_ATTR_NOT_SHAPESHIFT | SPELL_ATTR_UNK18 | SPELL_ATTR_STOP_ATTACK_TARGET)) && !target->HasInArc(M_PI_F, m_caster))

@@ -381,6 +381,25 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                 break;
         }
 
+		if (m_spellInfo->SpellIconID == 561)
+		{
+			damage += int32(0.43f * m_caster->SpellBaseDamageBonusDone(GetSpellSchoolMask(m_spellInfo)));
+			damage += int32(0.20f * unitTarget->SpellBaseDamageBonusTaken(GetSpellSchoolMask(m_spellInfo)));
+
+			if (m_caster->HasAura(20218))
+				damage *= 1.10f;
+			if (m_caster->HasAura(20050))
+				damage *= 1.03f;
+			if (m_caster->HasAura(20052))
+				damage *= 1.06f;
+			if (m_caster->HasAura(20053))
+				damage *= 1.09f;
+			if (m_caster->HasAura(20054))
+				damage *= 1.12f;
+			if (m_caster->HasAura(20055))
+				damage *= 1.15f;
+		}
+
         if (damage >= 0)
             m_damage += damage;
     }
@@ -1868,7 +1887,7 @@ void Spell::EffectEnergize(SpellEffectIndex eff_idx)
     switch (m_spellInfo->Id)
     {
         case 9512:                                          // Restore Energy
-            level_diff = m_caster->getLevel() - 40;
+            level_diff = m_caster->getLevel() - 60;
             level_multiplier = 2;
             break;
         case 24571:                                         // Blood Fury
@@ -3120,6 +3139,28 @@ void Spell::EffectWeaponDmg(SpellEffectIndex eff_idx)
 
     switch (m_spellInfo->SpellFamilyName)
     {
+		case SPELLFAMILY_GENERIC:
+		{
+			Unit* m_caster = GetCaster();
+			if (m_caster && m_spellInfo->Id == 20424)
+			{
+				spell_bonus += int32(0.20f * m_caster->SpellBaseDamageBonusDone(GetSpellSchoolMask(m_spellInfo)));
+
+				if(m_caster->HasAura(20218))
+					totalDamagePercentMod *= 1.10f;
+				if(m_caster->HasAura(20050))
+					totalDamagePercentMod *= 1.03f;
+				if(m_caster->HasAura(20052))
+					totalDamagePercentMod *= 1.06f;
+				if(m_caster->HasAura(20053))
+					totalDamagePercentMod *= 1.09f;
+				if(m_caster->HasAura(20054))
+					totalDamagePercentMod *= 1.12f;
+				if(m_caster->HasAura(20055))
+					totalDamagePercentMod *= 1.15f;
+			}
+			break;
+		}
         case SPELLFAMILY_ROGUE:
         {
             // Ambush

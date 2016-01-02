@@ -710,16 +710,27 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit* pVictim, uint32 damage, Aura
                         sLog.outError("Unit::HandleDummyAuraProc: non handled possibly SoR (Id = %u)", triggeredByAura->GetId());
                         return SPELL_AURA_PROC_FAILED;
                 }
+				float mods = 1.0f;
+				if (HasAura(20224))
+					mods *= 1.03f;
+				if (HasAura(20225))
+					mods *= 1.06f;
+				if (HasAura(20330))
+					mods *= 1.09f;
+				if (HasAura(20331))
+					mods *= 1.12f;
+				if (HasAura(20332))
+					mods *= 1.15f;
                 Item* item = ((Player*)this)->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND);
                 float speed = (item ? item->GetProto()->Delay : BASE_ATTACK_TIME) / 1000.0f;
 
                 float damageBasePoints;
                 if (item && item->GetProto()->InventoryType == INVTYPE_2HWEAPON)
                     // two hand weapon
-                    damageBasePoints = 1.20f * triggerAmount * 1.2f * 1.03f * speed / 100.0f + 1;
+                    damageBasePoints = (1.20f * triggerAmount * 1.2f * 1.03f * speed / 100.0f + 1) * mods;
                 else
                     // one hand weapon/no weapon
-                    damageBasePoints = 0.85f * ceil(triggerAmount * 1.2f * 1.03f * speed / 100.0f) - 1;
+                    damageBasePoints = (0.85f * ceil(triggerAmount * 1.2f * 1.03f * speed / 100.0f) - 1) * mods;
 
                 int32 damagePoint = int32(damageBasePoints + 0.03f * (GetWeaponDamageRange(BASE_ATTACK, MINDAMAGE) + GetWeaponDamageRange(BASE_ATTACK, MAXDAMAGE)) / 2.0f) + 1;
 
