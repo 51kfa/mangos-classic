@@ -3752,8 +3752,6 @@ void Spell::TakePower()
 	else
 		m_caster->ModifyPower(powerType, -(int32)m_powerCost/5);
 
-    m_caster->ModifyPower(powerType, -(int32)m_powerCost);
-
     // Set the five second timer
     if (powerType == POWER_MANA && m_powerCost > 0)
         m_caster->SetLastManaUse();
@@ -4133,6 +4131,11 @@ SpellCastResult Spell::CheckCast(bool strict)
 
                     m_targets.setUnitTarget(target);
                 }
+
+				if (m_spellInfo->SpellIconID == 225 
+						&& m_caster->GetGUID() == target->GetGUID() 
+						&& m_spellInfo->SpellFamilyName == SPELLFAMILY_MAGE)
+					return SPELL_FAILED_BAD_TARGETS;
             }
 
             // Some special spells with non-caster only mode
@@ -4142,9 +4145,6 @@ SpellCastResult Spell::CheckCast(bool strict)
                     m_spellInfo->SpellIconID == 16)
                 return SPELL_FAILED_BAD_TARGETS;
 
-			if (m_spellInfo->SpellFamilyName == SPELLFAMILY_MAGE &&
-					m_spellInfo->SpellIconID == 225)
-				return SPELL_FAILED_BAD_TARGETS;
         }
 
         // check pet presents
@@ -4259,8 +4259,14 @@ SpellCastResult Spell::CheckCast(bool strict)
         }
 		if (m_spellInfo->SpellIconID == 243 && target->HasInArc(M_PI_F, m_caster))
 		{
-			SendInterrupted(2);
-			return SPELL_FAILED_NOT_BEHIND;
+			if (m_caster->GetTypeId() == TYPEID_UNIT && m_caster->GetUInt32Value(UNIT_NPC_FLAGS) & UNIT_NPC_FLAG_TRAINER)
+			{
+			}
+			else
+			{
+				SendInterrupted(2);
+				return SPELL_FAILED_NOT_BEHIND;
+			}
 		}
 
         // Target must be facing you.
