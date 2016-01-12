@@ -4134,7 +4134,7 @@ SpellCastResult Spell::CheckCast(bool strict)
 
 				if (m_spellInfo->SpellIconID == 225 
 						&& m_caster->GetGUID() == target->GetGUID() 
-						&& m_spellInfo->SpellFamilyName == SPELLFAMILY_MAGE)
+						&& m_caster->getClass() == CLASS_MAGE)
 					return SPELL_FAILED_BAD_TARGETS;
             }
 
@@ -4257,12 +4257,15 @@ SpellCastResult Spell::CheckCast(bool strict)
                 return SPELL_FAILED_NOT_BEHIND;
             }
         }
+
 		if (m_spellInfo->SpellIconID == 243 && target->HasInArc(M_PI_F, m_caster))
 		{
-			if (m_caster->GetTypeId() == TYPEID_UNIT && m_caster->GetUInt32Value(UNIT_NPC_FLAGS) & UNIT_NPC_FLAG_TRAINER)
+			if (m_caster->GetTypeId() == TYPEID_UNIT && !(m_caster->GetUInt32Value(UNIT_NPC_FLAGS) & UNIT_NPC_FLAG_TRAINER))
 			{
+				SendInterrupted(2);
+				return SPELL_FAILED_NOT_BEHIND;
 			}
-			else
+			if (m_caster->GetTypeId() == TYPEID_PLAYER && m_caster->getClass() == CLASS_ROGUE)
 			{
 				SendInterrupted(2);
 				return SPELL_FAILED_NOT_BEHIND;
