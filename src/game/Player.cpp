@@ -4852,7 +4852,7 @@ bool Player::UpdateSkill(uint32 skill_id, uint32 step)
     if ((!max) || (!value) || (value >= max))
         return false;
 
-    if (value * 512 < max * urand(0, 512))
+    if (value * 512 < max * urand(0, 512) * 1.03)
     {
         uint32 new_value = value + step;
         if (new_value > max)
@@ -11228,7 +11228,46 @@ void Player::PrepareQuestMenu(ObjectGuid guid)
         if (status == QUEST_STATUS_COMPLETE && !GetQuestRewardStatus(quest_id))
             qm.AddMenuItem(quest_id, DIALOG_STATUS_REWARD_REP);
         else if (status == QUEST_STATUS_INCOMPLETE)
-            qm.AddMenuItem(quest_id, DIALOG_STATUS_INCOMPLETE);
+		{
+			bool bcomp = false;
+			bool bsend = false;
+			for (int m = 0; m < QUEST_OBJECTIVES_COUNT; ++m)
+			{
+				uint32 reqItemId = pQuest->ReqItemId[m];
+				if (!reqItemId)
+					continue;
+				uint32 cnt = 0;
+				for (int i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; ++i)
+				{
+					Item* pItem = GetItemByPos(INVENTORY_SLOT_BAG_0, i);
+					if (pItem && pItem->GetProto()->ItemId == reqItemId)
+						cnt++;
+				}
+				for (int i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; ++i)
+				{
+					if (Bag* pBag = (Bag*)GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+						cnt += pBag->GetItemCount(reqItemId);
+				}
+				QuestStatusData& q_status = mQuestStatus[quest_id];
+				if(q_status.m_itemcount[m] != cnt)
+				{
+					q_status.m_itemcount[m] = cnt;
+					if (q_status.uState != QUEST_NEW)
+						q_status.uState = QUEST_CHANGED;
+					if (CanCompleteQuest(quest_id))
+					{
+						CompleteQuest(quest_id);
+						qm.AddMenuItem(quest_id, DIALOG_STATUS_REWARD_REP);
+						bcomp = true;
+					}
+					bsend = true;
+				}
+			}
+			if (bsend)
+				UpdateForQuestWorldObjects();
+			if (!bcomp)
+				qm.AddMenuItem(quest_id, DIALOG_STATUS_INCOMPLETE);
+		}
         else if (status == QUEST_STATUS_AVAILABLE)
             qm.AddMenuItem(quest_id, DIALOG_STATUS_CHAT);
     }
