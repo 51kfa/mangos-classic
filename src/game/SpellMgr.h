@@ -993,6 +993,7 @@ class SpellMgr
         }
 
         SpellEntry const* SelectAuraRankForLevel(SpellEntry const* spellInfo, uint32 Level) const;
+		SpellEntry const* SelectAuraRankForLevel(SpellEntry const* spellInfo, Unit const* caster, Unit const* target) const;
 
         // Spell learning
         SpellLearnSkillNode const* GetSpellLearnSkill(uint32 spell_id) const
