@@ -358,6 +358,8 @@ bool IsNoStackAuraDueToAura(uint32 spellId_1, uint32 spellId_2)
 			return false;
 		if (IsSealSpell(spellInfo_2) && spellInfo_1->IsFitToFamilyMask(UI64LIT(0x0000000010000100)))
 			return false;
+		if ((spellInfo_1->SpellIconID == 453 && spellInfo_2->SpellIconID == 19) || (spellInfo_1->SpellIconID == 19 && spellInfo_2->SpellIconID == 453))
+			return false;
 	}
 
     for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
@@ -2005,6 +2007,12 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                 if ((spellInfo_1->SpellIconID == 456 && spellInfo_2->SpellIconID == 2006) ||
                         (spellInfo_2->SpellIconID == 456 && spellInfo_1->SpellIconID == 2006))
                     return false;
+
+				if(
+					((spellInfo_1->SpellFamilyFlags & UI64LIT(0x20000)) && (spellInfo_2->SpellFamilyFlags & UI64LIT(0x10000))) ||
+					((spellInfo_2->SpellFamilyFlags & UI64LIT(0x20000)) && (spellInfo_1->SpellFamilyFlags & UI64LIT(0x10000)))
+				  )
+					return false;
             }
 
             // Defensive State Dummy and Shield Block
@@ -2293,6 +2301,50 @@ SpellEntry const* SpellMgr::SelectAuraRankForLevel(SpellEntry const* spellInfo, 
 
     // not found
     return nullptr;
+}
+
+SpellEntry const* SpellMgr::SelectAuraRankForLevel(SpellEntry const* spellInfo, Unit const* caster, Unit const* target) const
+{
+	if (!target)
+		return nullptr;
+
+	uint32 level = target->getLevel();
+	if (level + 10 >= spellInfo->spellLevel)
+		return spellInfo;
+
+	if (IsPassiveSpell(spellInfo))
+		return spellInfo;
+
+	bool needRankSelection = false;
+	for (int i = 0; i < MAX_EFFECT_INDEX; ++i)
+	{
+		if (((spellInfo->Effect[i] == SPELL_EFFECT_APPLY_AURA &&
+						(IsExplicitPositiveTarget(spellInfo->EffectImplicitTargetA[i]) ||
+						 IsAreaEffectPossitiveTarget(Targets(spellInfo->EffectImplicitTargetA[i])))) ||
+					spellInfo->Effect[i] == SPELL_EFFECT_APPLY_AREA_AURA_PARTY) &&
+				IsPositiveEffect(spellInfo, SpellEffectIndex(i)))
+		{
+			needRankSelection = true;
+			break;
+		}
+	}
+	if (!needRankSelection || GetSpellRank(spellInfo->Id) == 0)
+		return spellInfo;
+
+	if (caster && caster->GetTypeId() == TYPEID_PLAYER)
+		return nullptr;
+
+	for (uint32 nextSpellId = spellInfo->Id; nextSpellId != 0; nextSpellId = GetPrevSpellInChain(nextSpellId))
+	{
+		SpellEntry const* nextSpellInfo = sSpellStore.LookupEntry(nextSpellId);
+		if (!nextSpellInfo)
+			break;
+
+		if (level + 10 >= nextSpellInfo->spellLevel)
+			return nextSpellInfo;
+	}
+
+	return nullptr;
 }
 
 typedef std::unordered_map<uint32, uint32> AbilitySpellPrevMap;

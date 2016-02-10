@@ -2431,7 +2431,7 @@ void Spell::EffectPickPocket(SpellEffectIndex /*eff_idx*/)
     // victim have to be alive and humanoid or undead
     if (unitTarget->isAlive() && (unitTarget->GetCreatureTypeMask() & CREATURE_TYPEMASK_HUMANOID_OR_UNDEAD) != 0)
     {
-        int32 chance = 10 + int32(m_caster->getLevel()) - int32(unitTarget->getLevel());
+        int32 chance = 18 + int32(m_caster->getLevel()) - int32(unitTarget->getLevel());
 
         if (chance > irand(0, 19))
         {

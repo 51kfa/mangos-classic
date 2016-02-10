@@ -127,6 +127,9 @@ bool GameObjectModel::initialize(const GameObject* const pGo, const GameObjectDi
 
 GameObjectModel* GameObjectModel::construct(const GameObject* const pGo)
 {
+	if (!pGo)
+		return nullptr;
+
     const GameObjectDisplayInfoEntry* info = sGameObjectDisplayInfoStore.LookupEntry(pGo->GetDisplayId());
     if (!info)
         return nullptr;
@@ -154,6 +157,9 @@ bool GameObjectModel::intersectRay(const G3D::Ray& ray, float& MaxDist, bool Sto
     Vector3 p = iInvRot * (ray.origin() - iPos) * iInvScale;
     Ray modRay(p, iInvRot * ray.direction());
     float distance = MaxDist * iInvScale;
+	if(!iModel)
+		return false;
+
     bool hit = iModel->IntersectRay(modRay, distance, StopAtFirstHit);
     if (hit)
     {

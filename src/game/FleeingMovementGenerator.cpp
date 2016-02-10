@@ -149,7 +149,7 @@ template<>
 void FleeingMovementGenerator<Player>::Finalize(Player& owner)
 {
     owner.clearUnitState(UNIT_STAT_FLEEING | UNIT_STAT_FLEEING_MOVE);
-    owner.StopMoving();
+    owner.StopMoving(true);
 }
 
 template<>
