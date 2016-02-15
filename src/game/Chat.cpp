@@ -3370,9 +3370,11 @@ void ChatHandler::BuildChatPacket(WorldPacket& data, ChatMsg msgtype, char const
 
 bool ChatHandler::HandleReloadAntiCheatCommand(char* args)
 {
+#ifdef ANTICHEAT
 	sLog.outString("Re-Loading anticheat config table...");
 	sObjectMgr.LoadAntiCheatConfig();
 	SendGlobalSysMessage("Anticheat config reloaded.");
+#endif
 	return true;
 }
 

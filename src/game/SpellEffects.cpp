@@ -4456,7 +4456,7 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
     bool isPrevInLiquid = false;
 
     // falling case
-	if (!unitTarget->GetMap()->GetLeapForwardHeight(UnitAreaId, prevPos.x, prevPos.y, groundZ, 3.0f) && unitTarget->m_movementInfo.HasMovementFlag(MOVEFLAG_FALLING))
+	if (!unitTarget->GetMap()->GetHeightInRange(prevPos.x, prevPos.y, groundZ, 3.0f) && unitTarget->m_movementInfo.HasMovementFlag(MOVEFLAG_FALLING))
     {
         nextPos.x = prevPos.x + dist * cos(orientation);
         nextPos.y = prevPos.y + dist * sin(orientation);
@@ -4472,7 +4472,7 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
         else
         {
             // fix z to ground if near of it
-			unitTarget->GetMap()->GetLeapForwardHeight(UnitAreaId, nextPos.x, nextPos.y, nextPos.z, 10.0f);
+			unitTarget->GetMap()->GetHeightInRange(prevPos.x, prevPos.y, groundZ, 10.0f);
         }
 
         // check any obstacle and fix coords
@@ -4515,7 +4515,7 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
         GridMapLiquidData liquidData;
 
         // try fix height for next position
-		if (!unitTarget->GetMap()->GetLeapForwardHeight(UnitAreaId, nextPos.x, nextPos.y, nextPos.z))
+		if (!unitTarget->GetMap()->GetHeightInRange(nextPos.x, nextPos.y, nextPos.z))
         {
             // we cant so test if we are on water
             if (!unitTarget->GetMap()->GetTerrain()->IsInWater(nextPos.x, nextPos.y, nextPos.z, &liquidData))
@@ -4552,7 +4552,7 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
             isInLiquid = true;
 
             float ground = nextPos.z;
-			if (unitTarget->GetMap()->GetLeapForwardHeight(UnitAreaId, nextPos.x, nextPos.y, ground))
+			if (unitTarget->GetMap()->GetHeightInRange(nextPos.x, nextPos.y, ground))
             {
                 if (nextPos.z < ground)
                 {

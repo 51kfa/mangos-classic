@@ -1048,9 +1048,6 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
                 !m_spellInfo->HasAttribute(SPELL_ATTR_STOP_ATTACK_TARGET))
             ((Player*)m_caster)->CastItemCombatSpell(unitTarget, m_attackType);
 
-		if (caster->GetObjectGuid().IsPlayer())
-			((Player*)caster)->GetAntiCheat()->DoAntiCheatCheck(CHECK_DAMAGE_SPELL, m_spellInfo->Id, 0, damageInfo.damage);
-
         caster->DealSpellDamage(&damageInfo, true);
 
         // Bloodthirst
