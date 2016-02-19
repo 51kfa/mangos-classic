@@ -229,6 +229,7 @@ class MANGOS_DLL_SPEC TerrainInfo : public Referencable<std::atomic_long>
         bool IsInWater(float x, float y, float z, GridMapLiquidData* data = 0) const;
         bool IsSwimmable(float x, float y, float pZ, float radius = 1.5f, GridMapLiquidData* data = 0) const;
         bool IsUnderWater(float x, float y, float z) const;
+		bool IsTouchWater(float x, float y, float z) const;
 
         GridMapLiquidStatus getLiquidStatus(float x, float y, float z, uint8 ReqLiquidType, GridMapLiquidData* data = 0) const;
 

@@ -381,6 +381,25 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                 break;
         }
 
+		if (m_spellInfo->SpellIconID == 561)
+		{
+			damage += int32(0.43f * m_caster->SpellBaseDamageBonusDone(GetSpellSchoolMask(m_spellInfo)));
+			damage += int32(0.20f * unitTarget->SpellBaseDamageBonusTaken(GetSpellSchoolMask(m_spellInfo)));
+
+			if (m_caster->HasAura(20218))
+				damage *= 1.10f;
+			if (m_caster->HasAura(20050))
+				damage *= 1.03f;
+			if (m_caster->HasAura(20052))
+				damage *= 1.06f;
+			if (m_caster->HasAura(20053))
+				damage *= 1.09f;
+			if (m_caster->HasAura(20054))
+				damage *= 1.12f;
+			if (m_caster->HasAura(20055))
+				damage *= 1.15f;
+		}
+
         if (damage >= 0)
             m_damage += damage;
     }
@@ -1868,7 +1887,7 @@ void Spell::EffectEnergize(SpellEffectIndex eff_idx)
     switch (m_spellInfo->Id)
     {
         case 9512:                                          // Restore Energy
-            level_diff = m_caster->getLevel() - 40;
+            level_diff = m_caster->getLevel() - 60;
             level_multiplier = 2;
             break;
         case 24571:                                         // Blood Fury
@@ -2412,7 +2431,7 @@ void Spell::EffectPickPocket(SpellEffectIndex /*eff_idx*/)
     // victim have to be alive and humanoid or undead
     if (unitTarget->isAlive() && (unitTarget->GetCreatureTypeMask() & CREATURE_TYPEMASK_HUMANOID_OR_UNDEAD) != 0)
     {
-        int32 chance = 10 + int32(m_caster->getLevel()) - int32(unitTarget->getLevel());
+        int32 chance = 18 + int32(m_caster->getLevel()) - int32(unitTarget->getLevel());
 
         if (chance > irand(0, 19))
         {
@@ -3120,6 +3139,28 @@ void Spell::EffectWeaponDmg(SpellEffectIndex eff_idx)
 
     switch (m_spellInfo->SpellFamilyName)
     {
+		case SPELLFAMILY_GENERIC:
+		{
+			Unit* m_caster = GetCaster();
+			if (m_caster && m_spellInfo->Id == 20424)
+			{
+				spell_bonus += int32(0.20f * m_caster->SpellBaseDamageBonusDone(GetSpellSchoolMask(m_spellInfo)));
+
+				if(m_caster->HasAura(20218))
+					totalDamagePercentMod *= 1.10f;
+				if(m_caster->HasAura(20050))
+					totalDamagePercentMod *= 1.03f;
+				if(m_caster->HasAura(20052))
+					totalDamagePercentMod *= 1.06f;
+				if(m_caster->HasAura(20053))
+					totalDamagePercentMod *= 1.09f;
+				if(m_caster->HasAura(20054))
+					totalDamagePercentMod *= 1.12f;
+				if(m_caster->HasAura(20055))
+					totalDamagePercentMod *= 1.15f;
+			}
+			break;
+		}
         case SPELLFAMILY_ROGUE:
         {
             // Ambush
@@ -3243,7 +3284,7 @@ void Spell::EffectInterruptCast(SpellEffectIndex /*eff_idx*/)
         {
             SpellEntry const* curSpellInfo = spell->m_spellInfo;
             // check if we can interrupt spell
-            if ((curSpellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_INTERRUPT) && curSpellInfo->PreventionType == SPELL_PREVENTION_TYPE_SILENCE)
+            if ((curSpellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_INTERRUPT) && (curSpellInfo->PreventionType == SPELL_PREVENTION_TYPE_SILENCE || curSpellInfo->SpellIconID == 1614))
             {
                 unitTarget->ProhibitSpellSchool(GetSpellSchoolMask(curSpellInfo), GetSpellDuration(m_spellInfo));
                 unitTarget->InterruptSpell(CurrentSpellTypes(i), false);
@@ -4402,6 +4443,7 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
 {
     float dist = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[eff_idx]));
     const float IN_OR_UNDER_LIQUID_RANGE = 0.8f;                // range to make player under liquid or on liquid surface from liquid level
+	uint32 UnitAreaId = unitTarget->GetAreaId();
 
     G3D::Vector3 prevPos, nextPos;
     float orientation = unitTarget->GetOrientation();
@@ -4414,7 +4456,7 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
     bool isPrevInLiquid = false;
 
     // falling case
-    if (!unitTarget->GetMap()->GetHeightInRange(prevPos.x, prevPos.y, groundZ, 3.0f) && unitTarget->m_movementInfo.HasMovementFlag(MOVEFLAG_FALLING))
+	if (!unitTarget->GetMap()->GetHeightInRange(prevPos.x, prevPos.y, groundZ, 3.0f) && unitTarget->m_movementInfo.HasMovementFlag(MOVEFLAG_FALLING))
     {
         nextPos.x = prevPos.x + dist * cos(orientation);
         nextPos.y = prevPos.y + dist * sin(orientation);
@@ -4430,7 +4472,7 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
         else
         {
             // fix z to ground if near of it
-            unitTarget->GetMap()->GetHeightInRange(nextPos.x, nextPos.y, nextPos.z, 10.0f);
+			unitTarget->GetMap()->GetHeightInRange(prevPos.x, prevPos.y, groundZ, 10.0f);
         }
 
         // check any obstacle and fix coords
@@ -4473,7 +4515,7 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
         GridMapLiquidData liquidData;
 
         // try fix height for next position
-        if (!unitTarget->GetMap()->GetHeightInRange(nextPos.x, nextPos.y, nextPos.z))
+		if (!unitTarget->GetMap()->GetHeightInRange(nextPos.x, nextPos.y, nextPos.z))
         {
             // we cant so test if we are on water
             if (!unitTarget->GetMap()->GetTerrain()->IsInWater(nextPos.x, nextPos.y, nextPos.z, &liquidData))
@@ -4510,7 +4552,7 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
             isInLiquid = true;
 
             float ground = nextPos.z;
-            if (unitTarget->GetMap()->GetHeightInRange(nextPos.x, nextPos.y, ground))
+			if (unitTarget->GetMap()->GetHeightInRange(nextPos.x, nextPos.y, ground))
             {
                 if (nextPos.z < ground)
                 {
@@ -4552,6 +4594,14 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
         isPrevInLiquid = isInLiquid;
         prevPos = nextPos;
     }
+
+	if (UnitAreaId == 1497)
+	{
+		uint32 zoneId, areaId;
+		sTerrainMgr.LoadTerrain(unitTarget->GetMapId())->GetZoneAndAreaId(zoneId, areaId, nextPos.x, nextPos.y, nextPos.z);
+		if (areaId != UnitAreaId)
+			return;
+	}
 
     unitTarget->NearTeleportTo(nextPos.x, nextPos.y, nextPos.z, orientation, unitTarget == m_caster);
 }
@@ -4668,23 +4718,22 @@ void Spell::EffectCharge(SpellEffectIndex /*eff_idx*/)
     unitTarget->GetContactPoint(m_caster, x, y, z, 3.666666f);
 	float dx = unitTarget->GetPositionX() - x;
 	float dy = unitTarget->GetPositionY() - y;
-	float dz = unitTarget->GetPositionZ() - z;
 	if (abs(dx) > 1)
 		x += dx / 2;
 	if (abs(dy) > 1)
 		y += dy / 2;
-	if (abs(dz) > 1)
-		z += dz / 2;
+	float height = m_caster->GetMap()->GetHeight(x, y, unitTarget->GetPositionZ());
+	z = z > height ? z : height;
+	m_caster->SetLastNormalHeight(z);
 
     if (unitTarget->GetTypeId() != TYPEID_PLAYER)
         ((Creature*)unitTarget)->StopMoving();
 
+	if (unitTarget != m_caster && !IsPositiveSpell(m_spellInfo->Id))
+		m_caster->Attack(unitTarget, true);
+
     // Only send MOVEMENTFLAG_WALK_MODE, client has strange issues with other move flags
     m_caster->MonsterMoveWithSpeed(x, y, z, 24.f, true, true);
-
-    // not all charge effects used in negative spells
-    if (unitTarget != m_caster && !IsPositiveSpell(m_spellInfo->Id))
-        m_caster->Attack(unitTarget, true);
 }
 
 void Spell::EffectSummonCritter(SpellEffectIndex eff_idx)

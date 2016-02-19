@@ -2525,6 +2525,11 @@ void Spell::prepare(SpellCastTargets const* targets, Aura* triggeredByAura)
         }
         SendCastResult(result);
         finish(false);
+		if (result == SPELL_FAILED_LINE_OF_SIGHT && m_caster->GetTypeId() == TYPEID_UNIT)
+		{
+			if (Unit* pTarget = m_targets.getUnitTarget())
+				m_caster->GetMotionMaster()->MoveChase(pTarget, m_caster->GetCombatDistance(pTarget, false));
+		}
         return;
     }
 
@@ -3688,7 +3693,61 @@ void Spell::TakePower()
 
     Powers powerType = Powers(m_spellInfo->powerType);
 
-    m_caster->ModifyPower(powerType, -(int32)m_powerCost);
+	if (m_spellInfo->Id == 5209)
+	{
+		m_caster->ModifyPower(powerType, -(int32)m_powerCost);
+		return;
+	}
+	switch (m_spellInfo->SpellFamilyName)
+	{
+		case SPELLFAMILY_WARRIOR:
+			{
+				if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x400000)
+						|| m_spellInfo->SpellFamilyFlags & UI64LIT(0x20000)
+						|| m_spellInfo->SpellFamilyFlags & UI64LIT(0x80)
+						|| m_spellInfo->Id == 1680
+						|| m_spellInfo->Id == 12323
+						|| m_spellInfo->Id == 1161)
+				{
+					m_caster->ModifyPower(powerType, -(int32)m_powerCost);
+					return;
+				}
+			}
+			break;
+		case SPELLFAMILY_DRUID:
+			{
+				if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x800)
+						|| m_spellInfo->SpellFamilyFlags & UI64LIT(0x8))
+				{
+					m_caster->ModifyPower(powerType, -(int32)m_powerCost);
+					return;
+				}
+			}
+			break;
+	}
+	bool hit = true;
+	if (m_caster->GetTypeId() == TYPEID_PLAYER)
+	{
+		if (powerType == POWER_RAGE || powerType == POWER_ENERGY)
+			if (ObjectGuid targetGUID = m_targets.getUnitTargetGuid())
+				for (std::list<TargetInfo>::iterator ihit= m_UniqueTargetInfo.begin(); ihit != m_UniqueTargetInfo.end(); ++ihit)
+					if (ihit->targetGUID == targetGUID)
+					{
+						if (ihit->missCondition != SPELL_MISS_NONE)
+						{
+							hit = false;
+							if (Player* modOwner = m_caster->GetSpellModOwner())
+							{
+								modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_SPELL_COST_REFUND_ON_FAIL, m_powerCost);
+							}
+							break;
+						}
+					}
+	}
+	if (hit || m_spellInfo->AttributesEx & SPELL_ATTR_EX_REQ_TARGET_COMBO_POINTS || m_spellInfo->AttributesEx & SPELL_ATTR_EX_REQ_COMBO_POINTS)
+		m_caster->ModifyPower(powerType, -(int32)m_powerCost);
+	else
+		m_caster->ModifyPower(powerType, -(int32)m_powerCost/5);
 
     // Set the five second timer
     if (powerType == POWER_MANA && m_powerCost > 0)
@@ -4069,6 +4128,11 @@ SpellCastResult Spell::CheckCast(bool strict)
 
                     m_targets.setUnitTarget(target);
                 }
+
+				if (m_spellInfo->SpellIconID == 225 
+						&& m_caster->GetGUID() == target->GetGUID() 
+						&& m_caster->getClass() == CLASS_MAGE)
+					return SPELL_FAILED_BAD_TARGETS;
             }
 
             // Some special spells with non-caster only mode
@@ -4077,6 +4141,7 @@ SpellCastResult Spell::CheckCast(bool strict)
             if (m_spellInfo->SpellFamilyName == SPELLFAMILY_WARLOCK &&
                     m_spellInfo->SpellIconID == 16)
                 return SPELL_FAILED_BAD_TARGETS;
+
         }
 
         // check pet presents
@@ -4189,6 +4254,20 @@ SpellCastResult Spell::CheckCast(bool strict)
                 return SPELL_FAILED_NOT_BEHIND;
             }
         }
+
+		if (m_spellInfo->SpellIconID == 243 && target->HasInArc(M_PI_F, m_caster))
+		{
+			if (m_caster->GetTypeId() == TYPEID_UNIT && !(m_caster->GetUInt32Value(UNIT_NPC_FLAGS) & UNIT_NPC_FLAG_TRAINER))
+			{
+				SendInterrupted(2);
+				return SPELL_FAILED_NOT_BEHIND;
+			}
+			if (m_caster->GetTypeId() == TYPEID_PLAYER && m_caster->getClass() == CLASS_ROGUE)
+			{
+				SendInterrupted(2);
+				return SPELL_FAILED_NOT_BEHIND;
+			}
+		}
 
         // Target must be facing you.
         if ((m_spellInfo->Attributes == (SPELL_ATTR_UNK4 | SPELL_ATTR_NOT_SHAPESHIFT | SPELL_ATTR_UNK18 | SPELL_ATTR_STOP_ATTACK_TARGET)) && !target->HasInArc(M_PI_F, m_caster))
@@ -4445,11 +4524,6 @@ SpellCastResult Spell::CheckCast(bool strict)
                 {
                     if (!m_targets.getUnitTarget() || m_targets.getUnitTarget()->GetHealth() > m_targets.getUnitTarget()->GetMaxHealth() * 0.2)
                         return SPELL_FAILED_BAD_TARGETS;
-                }
-                else if (m_spellInfo->Id == 51582)          // Rocket Boots Engaged
-                {
-                    if (m_caster->IsInWater())
-                        return SPELL_FAILED_ONLY_ABOVEWATER;
                 }
                 else if (m_spellInfo->SpellIconID == 156)   // Holy Shock
                 {

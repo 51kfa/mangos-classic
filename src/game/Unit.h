@@ -119,7 +119,8 @@ enum SpellModOp
     SPELLMOD_HASTE                  = 23,
     SPELLMOD_SPELL_BONUS_DAMAGE     = 24,
     SPELLMOD_MULTIPLE_VALUE         = 27,
-    SPELLMOD_RESIST_DISPEL_CHANCE   = 28
+    SPELLMOD_RESIST_DISPEL_CHANCE   = 28,
+	SPELLMOD_SPELL_COST_REFUND_ON_FAIL = 30
 };
 
 #define MAX_SPELLMOD 32
@@ -1863,6 +1864,8 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         virtual bool CanFly() const = 0;
 
         void ForceHealthAndPowerUpdate();   // force server to send new value for hp and power (including max)
+		void SetLastNormalHeight(float z){m_lastNormalZ = z;}
+		float GetLastNormalHeight(){ float ret = m_lastNormalZ; m_lastNormalZ = 0.0f; return ret; }
 
     protected:
         explicit Unit();
@@ -1918,6 +1921,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void DisableSpline();
         bool m_isCreatureLinkingTrigger;
         bool m_isSpawningLinked;
+		float m_lastNormalZ;
 
     private:
         void CleanupDeletedAuras();

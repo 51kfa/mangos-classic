@@ -1063,6 +1063,16 @@ bool TerrainInfo::IsUnderWater(float x, float y, float z) const
     return false;
 }
 
+bool TerrainInfo::IsTouchWater(float x, float y, float z) const
+{
+	if (const_cast<TerrainInfo*>(this)->GetGrid(x, y))
+	{
+		if (getLiquidStatus(x, y, z, MAP_LIQUID_TYPE_WATER | MAP_LIQUID_TYPE_OCEAN)&(LIQUID_MAP_ABOVE_WATER | LIQUID_MAP_WATER_WALK | LIQUID_MAP_IN_WATER | LIQUID_MAP_UNDER_WATER))
+			return true;
+	}
+	return false;
+}
+
 /**
  * Function find higher form water or ground height for current floor
  *

@@ -38,6 +38,7 @@
 #include "DBCStores.h"
 #include "SharedDefines.h"
 #include "Chat.h"
+#include "AntiCheat.h"
 
 #include<string>
 #include<vector>
@@ -1933,6 +1934,7 @@ class MANGOS_DLL_SPEC Player : public Unit
 
         bool isMoving() const { return m_movementInfo.HasMovementFlag(movementFlagsMask); }
         bool isMovingOrTurning() const { return m_movementInfo.HasMovementFlag(movementOrTurningFlagsMask); }
+		AntiCheat* GetAntiCheat() { return m_anticheat; }
 
         bool CanSwim() const { return true; }
         bool CanFly() const { return false; }
@@ -2260,6 +2262,8 @@ class MANGOS_DLL_SPEC Player : public Unit
         float  m_summon_x;
         float  m_summon_y;
         float  m_summon_z;
+
+		AntiCheat* m_anticheat;
 
     private:
         // internal common parts for CanStore/StoreItem functions
