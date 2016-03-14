@@ -510,12 +510,8 @@ SpellSpecific GetSpellSpecific(uint32 spellId)
             if ((spellInfo->IsFitToFamilyMask(UI64LIT(0x0000000020180400))) && spellInfo->baseLevel != 0)
                 return SPELL_JUDGEMENT;
 
-            for (int i = 0; i < 3; ++i)
-            {
-                // only paladin auras have this
-                if (spellInfo->Effect[i] == SPELL_EFFECT_APPLY_AREA_AURA_PARTY)
-                    return SPELL_AURA;
-            }
+			if (spellInfo->HasSpellEffect(SPELL_EFFECT_APPLY_AREA_AURA_PARTY))
+				return SPELL_AURA;
             break;
         }
         case SPELLFAMILY_SHAMAN:
@@ -2878,7 +2874,7 @@ void SpellMgr::LoadSpellLearnSpells()
                 // talent or passive spells or skill-step spells auto-casted and not need dependent learning,
                 // pet teaching spells don't must be dependent learning (casted)
                 // other required explicit dependent learning
-                dbc_node.autoLearned = entry->EffectImplicitTargetA[i] == TARGET_PET || GetTalentSpellCost(spell) > 0 || IsPassiveSpell(entry) || IsSpellHaveEffect(entry, SPELL_EFFECT_SKILL_STEP);
+				dbc_node.autoLearned = entry->EffectImplicitTargetA[i] == TARGET_PET || GetTalentSpellCost(spell) > 0 || IsPassiveSpell(entry) || entry->HasSpellEffect(SPELL_EFFECT_SKILL_STEP);
 
                 SpellLearnSpellMapBounds db_node_bounds = GetSpellLearnSpellMapBounds(spell);
 
@@ -3651,7 +3647,7 @@ void SpellMgr::CheckUsedSpells(char const* table)
             }
             else
             {
-                if (effectType >= 0 && !IsSpellHaveEffect(spellEntry, SpellEffects(effectType)))
+				if (effectType >= 0 && !spellEntry->HasSpellEffect(SpellEffects(effectType)))
                 {
                     sLog.outError("Spell %u '%s' not have effect %u but used in %s.", spell, name.c_str(), effectType, code.c_str());
                     continue;
@@ -3711,7 +3707,7 @@ void SpellMgr::CheckUsedSpells(char const* table)
                 }
                 else
                 {
-                    if (effectType >= 0 && !IsSpellHaveEffect(spellEntry, SpellEffects(effectType)))
+					if (effectType >= 0 && !spellEntry->HasSpellEffect(SpellEffects(effectType)))
                         continue;
 
                     if (auraType >= 0 && !IsSpellHaveAura(spellEntry, AuraType(auraType)))

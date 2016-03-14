@@ -4056,7 +4056,7 @@ void Aura::HandleShapeshiftBoosts(bool apply)
         for (Unit::SpellAuraHolderMap::iterator itr = tAuras.begin(); itr != tAuras.end();)
         {
             //if (itr->second->IsRemovedOnShapeLost())
-			if (itr->second->IsRemovedOnShapeLost() || itr->second->GetSpellProto()->Id == 24864)
+			if ((itr->second->IsRemovedOnShapeLost() && itr->second->GetSpellProto()->Id != 12292) || itr->second->GetSpellProto()->Id == 24864)   // Feline Swiftness Passive 2a drop, Sweeping Strikes keep TODO
             {
                 target->RemoveAurasDueToSpell(itr->second->GetId());
                 itr = tAuras.begin();
@@ -4676,11 +4676,6 @@ void Aura::PeriodicTick()
             {
                 // eating anim
                 target->HandleEmoteCommand(EMOTE_ONESHOT_EAT);
-            }
-            else if (GetId() == 20577)
-            {
-                // cannibalize anim
-                target->HandleEmoteCommand(EMOTE_STATE_CANNIBALIZE);
             }
 
             // Anger Management

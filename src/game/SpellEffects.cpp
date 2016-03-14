@@ -758,7 +758,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 case 20577:                                 // Cannibalize
                 {
                     if (unitTarget)
-                        m_caster->CastSpell(m_caster, 20578, true, nullptr);
+						AddTriggeredSpell(20578);
                     return;
                 }
                 case 21147:                                 // Arcane Vacuum
@@ -1304,6 +1304,16 @@ void Spell::EffectTriggerSpell(SpellEffectIndex eff_idx)
     // special cases
     switch (triggered_spell_id)
     {
+		// Temporal Parasite Summon #2, special case because chance is set to 101% in DBC while description is 67%
+		case 16630:
+			if (urand(0, 100) < 67)
+				m_caster->CastSpell(unitTarget, triggered_spell_id, true);
+			return;
+		// Temporal Parasite Summon #3, special case because chance is set to 101% in DBC while description is 34%
+		case 16631:
+			if (urand(0, 100) < 34)
+				m_caster->CastSpell(unitTarget, triggered_spell_id, true);
+			return;
         // Vanish (not exist)
         case 18461:
         {

@@ -710,7 +710,7 @@ void Spell::prepareDataForTriggerSystem()
     // avoid triggering negative hit for only positive targets
     m_negativeEffectMask = 0x0;
     for (int i = 0; i < MAX_EFFECT_INDEX; ++i)
-        if (!IsPositiveEffect(m_spellInfo, SpellEffectIndex(i)))
+        if (m_spellInfo->Effect[i] != SPELL_EFFECT_NONE && !IsPositiveEffect(m_spellInfo, SpellEffectIndex(i)))
             m_negativeEffectMask |= (1 << i);
 
     // Hunter traps spells (for Entrapment trigger)
@@ -3675,7 +3675,8 @@ void Spell::TakeCastItem()
 
 void Spell::TakePower()
 {
-    if (m_CastItem || m_triggeredByAuraSpell)
+    //if (m_CastItem || m_triggeredByAuraSpell)
+	if (m_CastItem || m_IsTriggeredSpell)   // all triggered spells ignore power req
         return;
 
     // health as power used
@@ -4052,8 +4053,8 @@ SpellCastResult Spell::CheckCast(bool strict)
             case SPELLFAMILY_SHAMAN:
             case SPELLFAMILY_PALADIN:
             {
-                if (IsSpellHaveEffect(m_spellInfo, SPELL_EFFECT_HEAL) || IsSpellHaveAura(m_spellInfo, SPELL_AURA_PERIODIC_HEAL) ||
-                        IsSpellHaveEffect(m_spellInfo, SPELL_EFFECT_DISPEL))
+				if (m_spellInfo->HasSpellEffect(SPELL_EFFECT_HEAL) || IsSpellHaveAura(m_spellInfo, SPELL_AURA_PERIODIC_HEAL) ||
+						m_spellInfo->HasSpellEffect(SPELL_EFFECT_DISPEL))
                 {
                     Unit::AuraList const& auraClassScripts = m_caster->GetAurasByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
                     for (Unit::AuraList::const_iterator itr = auraClassScripts.begin(); itr != auraClassScripts.end();)
@@ -4245,7 +4246,7 @@ SpellCastResult Spell::CheckCast(bool strict)
                 return SPELL_FAILED_TARGET_AURASTATE;
 
         // Must be behind the target.
-        if (m_spellInfo->AttributesEx2 == SPELL_ATTR_EX2_UNK20 && m_spellInfo->HasAttribute(SPELL_ATTR_EX_UNK9) && target->HasInArc(M_PI_F, m_caster))
+        if (m_spellInfo->AttributesEx2 == SPELL_ATTR_EX2_UNK20 && m_spellInfo->HasAttribute(SPELL_ATTR_EX_UNK9) && target->HasInArc(M_PI_F, m_caster) && !target->hasUnitState(UNIT_STAT_FLEEING|UNIT_STAT_FLEEING_MOVE))
         {
             // Exclusion for Pounce: Facing Limitation was removed in 2.0.1, but it still uses the same, old Ex-Flags
             if (!m_spellInfo->IsFitToFamily(SPELLFAMILY_DRUID, UI64LIT(0x0000000000020000)))
@@ -4255,7 +4256,7 @@ SpellCastResult Spell::CheckCast(bool strict)
             }
         }
 
-		if (m_spellInfo->SpellIconID == 243 && target->HasInArc(M_PI_F, m_caster))
+		if (m_spellInfo->SpellIconID == 243 && target->HasInArc(M_PI_F, m_caster) && !target->hasUnitState(UNIT_STAT_FLEEING | UNIT_STAT_FLEEING_MOVE))
 		{
 			if (m_caster->GetTypeId() == TYPEID_UNIT && !(m_caster->GetUInt32Value(UNIT_NPC_FLAGS) & UNIT_NPC_FLAG_TRAINER))
 			{
@@ -5495,10 +5496,18 @@ uint32 Spell::CalculatePowerCost(SpellEntry const* spellInfo, Unit* caster, Spel
 
 SpellCastResult Spell::CheckPower()
 {
+	if (m_IsTriggeredSpell)
+		return SPELL_CAST_OK;
+
     // item cast not used power
     if (m_CastItem)
         return SPELL_CAST_OK;
 
+	if (m_caster->GetTypeId() != TYPEID_PLAYER)
+	{
+		if (!m_caster->GetObjectGuid().IsPet() && m_caster->HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER) != m_caster->isInCombat())
+			return SPELL_CAST_OK;
+	}
     // health as power used - need check health amount
     if (m_spellInfo->powerType == POWER_HEALTH)
     {

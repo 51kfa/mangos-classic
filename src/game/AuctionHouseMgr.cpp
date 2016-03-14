@@ -575,6 +575,8 @@ void AuctionHouseObject::BuildListOwnerItems(WorldPacket& data, Player* player, 
                 ++count;
             ++totalcount;
         }
+		if (count > 50)
+			break;
     }
 }
 

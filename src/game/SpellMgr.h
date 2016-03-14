@@ -89,10 +89,7 @@ WeaponAttackType GetWeaponAttackType(SpellEntry const* spellInfo);
 
 inline bool IsSpellHaveEffect(SpellEntry const* spellInfo, SpellEffects effect)
 {
-    for (int i = 0; i < MAX_EFFECT_INDEX; ++i)
-        if (SpellEffects(spellInfo->Effect[i]) == effect)
-            return true;
-    return false;
+	return spellInfo ? spellInfo->HasSpellEffect(effect) : false;
 }
 
 inline bool IsAuraApplyEffect(SpellEntry const* spellInfo, SpellEffectIndex effecIdx)
@@ -191,7 +188,7 @@ inline bool IsPassiveSpellStackableWithRanks(SpellEntry const* spellProto)
     if (!IsPassiveSpell(spellProto))
         return false;
 
-    return !IsSpellHaveEffect(spellProto, SPELL_EFFECT_APPLY_AURA);
+	return !spellProto->HasSpellEffect(SPELL_EFFECT_APPLY_AURA);
 }
 
 
@@ -399,7 +396,7 @@ inline bool IsOnlySelfTargeting(SpellEntry const* spellInfo)
 
 inline bool IsDispelSpell(SpellEntry const* spellInfo)
 {
-    return IsSpellHaveEffect(spellInfo, SPELL_EFFECT_DISPEL);
+	return spellInfo->HasSpellEffect(SPELL_EFFECT_DISPEL);
 }
 
 inline bool isSpellBreakStealth(SpellEntry const* spellInfo)

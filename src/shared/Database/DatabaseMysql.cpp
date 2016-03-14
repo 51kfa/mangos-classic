@@ -133,6 +133,8 @@ bool MySQLConnection::Initialize(const char* infoString)
         unix_socket = 0;
     }
 #endif
+	bool bReconnect = true;
+	mysql_options(mysqlInit, MYSQL_OPT_RECONNECT, &bReconnect);
 
     mMysql = mysql_real_connect(mysqlInit, host.c_str(), user.c_str(),
                                 password.c_str(), database.c_str(), port, unix_socket, 0);
@@ -183,6 +185,9 @@ bool MySQLConnection::_Query(const char* sql, MYSQL_RES** pResult, MYSQL_FIELD**
 
     if (mysql_query(mMysql, sql))
     {
+		unsigned int err = mysql_errno(mMysql);
+		if (err == 2006 || err == 2003 || err == 2013)
+			mysql_ping(mMysql);
         sLog.outErrorDb("SQL: %s", sql);
         sLog.outErrorDb("query ERROR: %s", mysql_error(mMysql));
         return false;

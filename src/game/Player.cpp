@@ -1538,6 +1538,12 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
             SendTransferAbortedByLockStatus(mEntry, lockStatus, miscRequirement);
             return false;
         }
+
+		if (isDead() && mEntry->IsDungeon())
+		{
+			ResurrectPlayer(0.5f);
+			SpawnCorpseBones();
+		}
     }
 
     // if we were on a transport, leave
@@ -6793,7 +6799,7 @@ void Player::CastItemCombatSpell(Unit* Target, WeaponAttackType attType)
         }
 
         // not allow proc extra attack spell at extra attack
-        if (m_extraAttacks && IsSpellHaveEffect(spellInfo, SPELL_EFFECT_ADD_EXTRA_ATTACKS))
+		if (m_extraAttacks && spellInfo->HasSpellEffect(SPELL_EFFECT_ADD_EXTRA_ATTACKS))
             return;
 
         float chance = (float)spellInfo->procChance;

@@ -636,6 +636,8 @@ ChatChannelsEntry const* GetChannelEntryFor(uint32 channel_id)
     return nullptr;
 }
 
+static ChatChannelsEntry worldCh = { 26, 4, "world" };
+
 ChatChannelsEntry const* GetChannelEntryFor(const std::string& name)
 {
     // not sorted, numbering index from 0
@@ -655,6 +657,19 @@ ChatChannelsEntry const* GetChannelEntryFor(const std::string& name)
                 return ch;
         }
     }
+
+	bool compare = true;        // hack for world channel, TODO smth!
+	std::string world = "world";
+	for (uint8 i = 0; i < name.length(); ++i)
+	{
+		if (tolower(name[i]) != world[i])
+		{
+			compare = false;
+			break;
+		}
+	}
+	if (compare)
+		return &worldCh;
     return nullptr;
 }
 

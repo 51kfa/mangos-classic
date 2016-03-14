@@ -612,7 +612,7 @@ void ObjectMgr::ConvertCreatureAddonAuras(CreatureDataAddon* addon, char const* 
         }
 
         // Must be Aura, but also allow dummy/script effect spells, as they are used sometimes to select a random aura or similar
-        if (!IsSpellAppliesAura(AdditionalSpellInfo) && !IsSpellHaveEffect(AdditionalSpellInfo, SPELL_EFFECT_DUMMY) && !IsSpellHaveEffect(AdditionalSpellInfo, SPELL_EFFECT_SCRIPT_EFFECT) && !IsSpellHaveEffect(AdditionalSpellInfo, SPELL_EFFECT_TRIGGER_SPELL))
+		if (!IsSpellAppliesAura(AdditionalSpellInfo) && !AdditionalSpellInfo->HasSpellEffect(SPELL_EFFECT_DUMMY) && !AdditionalSpellInfo->HasSpellEffect(SPELL_EFFECT_SCRIPT_EFFECT) && !AdditionalSpellInfo->HasSpellEffect(SPELL_EFFECT_TRIGGER_SPELL))
         {
             sLog.outErrorDb("Creature (%s: %u) has spell %u defined in `auras` field in `%s, but spell doesn't apply an aura`.", guidEntryStr, addon->guidOrEntry, cAura, table);
             continue;
@@ -7072,6 +7072,17 @@ bool PlayerCondition::Meets(Player const* player, Map const* map, WorldObject co
 
             return creature;
         }
+		case CONDITION_GAMEOBJECT_IN_RANGE:
+		{
+			GameObject* pGo = NULL;
+			if (source)
+			{
+				MaNGOS::NearestGameObjectEntryInObjectRangeCheck go_check(*source, m_value1, m_value2);
+				MaNGOS::GameObjectLastSearcher<MaNGOS::NearestGameObjectEntryInObjectRangeCheck> searcher(pGo, go_check);
+				Cell::VisitGridObjects(source, searcher, m_value2);
+			}
+			return pGo;
+		}
         default:
             return false;
     }

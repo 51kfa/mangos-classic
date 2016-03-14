@@ -840,7 +840,7 @@ struct npc_mistress_nagmaraAI : public ScriptedAI
             }
         }
 
-        if (!pRocknot)
+        if (!pRocknot || !m_creature)
             return;
 
         switch (m_uiPhase)
