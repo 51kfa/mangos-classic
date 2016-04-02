@@ -423,7 +423,7 @@ bool LootItem::AllowedForPlayer(Player const* player, WorldObject const* lootTar
 LootSlotType LootItem::GetSlotTypeForSharedLoot(Player const* player, Loot const* loot) const
 {
     // ignore looted, FFA (each player get own copy) and not allowed items
-    if (IsLootedFor(player->GetObjectGuid()) || !AllowedForPlayer(player, loot->GetLootTarget()))
+	if (IsLootedFor(player->GetObjectGuid()) || !AllowedForPlayer(player, loot->GetLootTarget()))
         return MAX_LOOT_SLOT_TYPE;
 
     if (freeForAll)

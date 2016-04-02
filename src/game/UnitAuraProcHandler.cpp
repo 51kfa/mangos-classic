@@ -698,6 +698,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit* pVictim, uint32 damage, Aura
                 uint32 spellId;
                 switch (triggeredByAura->GetId())
                 {
+					case 20154:
                     case 21084: spellId = 25742; break;     // Rank 1
                     case 20287: spellId = 25740; break;     // Rank 2
                     case 20288: spellId = 25739; break;     // Rank 3
@@ -1160,7 +1161,7 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit* pVictim, uint32 d
     }
 
     // not allow proc extra attack spell at extra attack
-    if (m_extraAttacks && IsSpellHaveEffect(triggerEntry, SPELL_EFFECT_ADD_EXTRA_ATTACKS))
+	if (m_extraAttacks && triggerEntry->HasSpellEffect(SPELL_EFFECT_ADD_EXTRA_ATTACKS) && triggerEntry->Id != 20178)
         return SPELL_AURA_PROC_FAILED;
 
     // Custom basepoints/target for exist spell

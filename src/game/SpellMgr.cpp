@@ -342,7 +342,59 @@ bool IsPassiveSpell(uint32 spellId)
 
 bool IsPassiveSpell(SpellEntry const* spellInfo)
 {
-    return spellInfo->HasAttribute(SPELL_ATTR_PASSIVE);
+	switch (spellInfo->Id)
+	{
+		case 24151:
+		case 24153:
+		case 24154:
+		case 24155:
+		case 24156:
+		case 24157:
+		case 24158:
+		case 24159:
+		case 24148:
+		case 15388:
+		case 15390:
+		case 15393:
+		case 15396:
+		case 15399:
+		case 15401:
+		case 15403:
+		case 15405:
+		case 15408:
+		case 15428:
+		case 15437:
+		case 15440:
+		case 15442:
+		case 15445:
+		case 15447:
+		case 15456:
+		case 15461:
+		case 15462:
+		case 15488:
+		case 15489:
+			return true;
+		default:
+			return spellInfo->HasAttribute(SPELL_ATTR_PASSIVE);
+	}
+}
+
+bool IsNoStackEx(SpellEntry const* spellInfo_1, SpellEntry const* spellInfo_2)
+{
+	if (spellInfo_1->SpellIconID != spellInfo_2->SpellIconID)
+	{
+		if (spellInfo_1->SpellIconID == 1299 || spellInfo_2->SpellIconID == 1299)
+			return false;
+		if (spellInfo_1->SpellIconID == 1303 || spellInfo_2->SpellIconID == 1303)
+			return false;
+		if (spellInfo_1->SpellIconID == 1336 || spellInfo_2->SpellIconID == 1336)
+			return false;
+		if (spellInfo_1->SpellIconID == 63 || spellInfo_2->SpellIconID == 63)
+			return false;
+		if (spellInfo_1->SpellIconID == 312 || spellInfo_2->SpellIconID == 312)
+			return false;
+	}
+	return true;
 }
 
 bool IsNoStackAuraDueToAura(uint32 spellId_1, uint32 spellId_2)
@@ -673,6 +725,14 @@ bool IsExplicitNegativeTarget(uint32 targetA)
 
 bool IsPositiveEffect(SpellEntry const* spellproto, SpellEffectIndex effIndex)
 {
+	switch (spellproto->Id)
+	{
+		case 13003:
+		case 13010:
+			return false;
+		default:
+			break;
+	}
     switch (spellproto->Effect[effIndex])
     {
         case SPELL_EFFECT_DUMMY:
@@ -838,6 +898,8 @@ bool IsPositiveEffect(SpellEntry const* spellproto, SpellEffectIndex effIndex)
                     switch (spellproto->EffectMiscValue[effIndex])
                     {
                         case SPELLMOD_COST:                 // dependent from bas point sign (negative -> positive)
+							if(spellproto->Id == 12042)         // Arcane Power
+								break;
                             if (spellproto->CalculateSimpleValue(effIndex) > 0)
                                 return false;
                             break;

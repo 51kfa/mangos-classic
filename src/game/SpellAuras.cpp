@@ -2431,6 +2431,16 @@ void Aura::HandleAuraModStun(bool apply, bool Real)
             return;
         }
     }
+
+	if (GetSpellProto()->IsFitToFamily(SPELLFAMILY_ROGUE, UI64LIT(0x80)))
+	{
+		target->SetInDummyCombatState(apply);
+		if (!apply)
+		{
+			target->getThreatManager().setDirty(true);
+			GetCaster()->getThreatManager().setDirty(true);
+		}
+	}
 }
 
 void Aura::HandleModStealth(bool apply, bool Real)

@@ -1146,6 +1146,12 @@ void Spell::DoSpellHitOnUnit(Unit* unit, uint32 effectMask, bool isReflected)
             if (!m_spellInfo->HasAttribute(SPELL_ATTR_EX_NOT_BREAK_STEALTH))
                 unit->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
 
+			if (realCaster->GetTypeId() == TYPEID_UNIT && ((Creature*)realCaster)->IsPet())
+			{
+				if (m_spellInfo->Id == 6358)
+					realCaster->RemoveSpellsCausingAura(SPELL_AURA_MOD_INVISIBILITY);
+			}
+
             // can cause back attack (if detected), stealth removed at Spell::cast if spell break it
             if (!m_spellInfo->HasAttribute(SPELL_ATTR_EX3_NO_INITIAL_AGGRO) && !IsPositiveSpell(m_spellInfo->Id) &&
                     m_caster->isVisibleForOrDetect(unit, unit, false))
@@ -3953,7 +3959,18 @@ void Spell::CastTriggerSpells()
 {
     for (SpellInfoList::const_iterator si = m_TriggerSpells.begin(); si != m_TriggerSpells.end(); ++si)
     {
-        Spell* spell = new Spell(m_caster, (*si), true, m_originalCasterGUID);
+		bool _triggered = true;
+		switch ((*si)->Id)
+		{
+			case 13181:                                      // Gnomish MC cap
+			case 20578:                                      // Cannibalize healing effect
+				_triggered = false;
+				break;
+			default:
+				break;
+		}
+
+		Spell* spell = new Spell(m_caster, (*si), _triggered, m_originalCasterGUID);
         spell->prepare(&m_targets);                         // use original spell original targets
     }
 }
@@ -4130,10 +4147,20 @@ SpellCastResult Spell::CheckCast(bool strict)
                     m_targets.setUnitTarget(target);
                 }
 
+				if (m_spellInfo->SpellFamilyName == SPELLFAMILY_MAGE &&
+						m_spellInfo->SpellFamilyFlags & UI64LIT(0x00000800) &&
+						m_caster == target)
+					return SPELL_FAILED_BAD_TARGETS;
+
 				if (m_spellInfo->SpellIconID == 225 
 						&& m_caster->GetGUID() == target->GetGUID() 
 						&& m_caster->getClass() == CLASS_MAGE)
 					return SPELL_FAILED_BAD_TARGETS;
+
+				if (m_spellInfo->Id == 13278 && m_caster == target)
+					return SPELL_FAILED_BAD_TARGETS;
+
+				m_targets.setUnitTarget(target);
             }
 
             // Some special spells with non-caster only mode
@@ -6130,7 +6157,8 @@ bool Spell::IsNeedSendToClient() const
 
 bool Spell::IsTriggeredSpellWithRedundentCastTime() const
 {
-    return m_IsTriggeredSpell && (m_spellInfo->manaCost || m_spellInfo->ManaCostPercentage);
+	return m_IsTriggeredSpell && (m_spellInfo->manaCost || m_spellInfo->ManaCostPercentage);
+	//return m_triggeredByAuraSpell || (m_IsTriggeredSpell && (m_spellInfo->manaCost || m_spellInfo->ManaCostPercentage));
 }
 
 bool Spell::HaveTargetsForEffect(SpellEffectIndex effect) const

@@ -516,6 +516,67 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     m_caster->CastSpell(unitTarget, spell_id, true, nullptr);
                     return;
                 }
+				case 13006:                                 // Gnomish Shrink Ray
+				{
+					if (!unitTarget)
+						return;
+					uint32 roll = urand(0,99);
+					uint32 inner_roll = urand(1,3);
+
+					if (roll < 5) // 5% negative backfire
+					{
+						switch (inner_roll)
+						{
+							case 1:
+								m_caster->CastSpell(m_caster, 13003, true, m_CastItem);  // -250 AP + shrink caster 
+								break;
+							case 2:
+								m_caster->CastSpell(m_caster, 13010, true, m_CastItem);  // -250AP + shrink all caster's party 
+								break;
+							default:
+								unitTarget->CastSpell(unitTarget, 13004, true, nullptr);    // +250AP + grow victim
+								break;
+						}
+					}
+					else if (roll < 25) // 20% positive backfire
+						m_caster->CastSpell(m_caster, 13004, true, m_CastItem);
+					else
+						m_caster->CastSpell(unitTarget, 13003, true, m_CastItem);
+					return;
+				}
+				case 13180:                                 // Gnomish mind control cap
+				{
+					if (!unitTarget)
+						return;
+
+					uint32 roll = urand(0,99);
+
+					if (roll < 5)                          // 5% victim MC the caster (off-like chance unknown)
+						unitTarget->CastSpell(m_caster, 13181, true, nullptr);
+					else if (roll < 35)                    // 30% fail (off-like chance unknown)
+						return;
+					else
+						AddTriggeredSpell(13181);
+					return;
+				}
+				case 13278:                                // Gnomish Death Ray charging
+				{
+					if (unitTarget)
+						m_caster->CastSpell(m_caster, 13493, true, nullptr);
+
+					return;
+				}
+				case 13280:                                // Gnomish Death Ray ending charge
+				{
+					if (unitTarget)
+					{
+						uint32 roll = urand(0,7);
+						int32 dmg[8] = {900, 1200, 1500, 1800, 2100, 2400, 2700, 3000};
+
+						m_caster->CastCustomSpell(unitTarget, 13279, &dmg[roll], nullptr, nullptr, true);
+					}
+					return;
+				}
                 case 13535:                                 // Tame Beast
                 {
                     if (!m_originalCaster || m_originalCaster->GetTypeId() != TYPEID_PLAYER)
@@ -3830,6 +3891,25 @@ void Spell::EffectSanctuary(SpellEffectIndex /*eff_idx*/)
     // Vanish allows to remove all threat and cast regular stealth so other spells can be used
     if (m_spellInfo->IsFitToFamily(SPELLFAMILY_ROGUE, UI64LIT(0x0000000000000800)))
         ((Player*)m_caster)->RemoveSpellsCausingAura(SPELL_AURA_MOD_ROOT);
+
+	if (m_triggeredByAuraSpell && m_spellInfo->Id == 14093 && unitTarget->GetTypeId() == TYPEID_PLAYER)
+	{
+		uint32 stealth_id = 0;
+		SpellCooldowns const scm = ((Player*)unitTarget)->GetSpellCooldownMap();
+		for (SpellCooldowns::const_iterator it = scm.begin(); it != scm.end(); ++it)
+		{
+			if (it->first >= 1784 && it->first <= 1787)
+			{
+				stealth_id = it->first;
+				break;
+			}
+		}
+		if (!stealth_id)
+			return;
+
+		((Player*)unitTarget)->RemoveSpellCooldown(stealth_id);
+		unitTarget->CastSpell(unitTarget, stealth_id, true);
+	}
 }
 
 void Spell::EffectAddComboPoints(SpellEffectIndex /*eff_idx*/)

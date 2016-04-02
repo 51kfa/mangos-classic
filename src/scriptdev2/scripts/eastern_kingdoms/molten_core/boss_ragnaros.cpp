@@ -48,6 +48,7 @@ enum
     SPELL_ELEMENTAL_FIRE_KILL   = 19773,
     SPELL_MIGHT_OF_RAGNAROS     = 21154,
     SPELL_INTENSE_HEAT          = 21155,
+	SPELL_MAGMA					= 23378,
 
     MAX_ADDS_IN_SUBMERGE        = 8,
     NPC_SON_OF_FLAME            = 12143,
@@ -74,6 +75,7 @@ struct boss_ragnarosAI : public Scripted_NoMovementAI
     uint32 m_uiSubmergeTimer;
     uint32 m_uiAttackTimer;
     uint32 m_uiAddCount;
+	uint32 m_uiMagmaBurstTimer;
 
     bool m_bHasAggroYelled;
     bool m_bHasYelledMagmaBurst;
@@ -86,6 +88,7 @@ struct boss_ragnarosAI : public Scripted_NoMovementAI
         m_uiHammerTimer = 11000;                            // TODO wowwiki states 20-30s timer, but ~11s confirmed
         m_uiMagmaBlastTimer = 2000;
         m_uiElementalFireTimer = 3000;
+		m_uiMagmaBurstTimer = 10000;
         m_uiSubmergeTimer = 3 * MINUTE * IN_MILLISECONDS;
         m_uiAttackTimer = 90 * IN_MILLISECONDS;
         m_uiAddCount = 0;
@@ -287,6 +290,14 @@ struct boss_ragnarosAI : public Scripted_NoMovementAI
         else
             m_uiSubmergeTimer -= uiDiff;
 
+		if (m_uiMagmaBurstTimer < uiDiff)
+		{
+			m_creature->CastSpell(879.0f, -847.0f, -230.0f, SPELL_MAGMA, true);
+			m_uiMagmaBurstTimer = urand(8000, 15000);
+		}
+		else
+			m_uiMagmaBurstTimer -= uiDiff;
+
         // TODO this actually should select _any_ enemy in melee range, not only the tank
         // Range check for melee target, if nobody is found in range, then cast magma blast on random
         // If we are within range melee the target
@@ -317,7 +328,7 @@ struct boss_ragnarosAI : public Scripted_NoMovementAI
                             DoScriptText(SAY_MAGMABURST, m_creature);
                             m_bHasYelledMagmaBurst = true;
                         }
-                        m_uiMagmaBlastTimer = 1000;         // Spamm this!
+                        m_uiMagmaBlastTimer = 2500;         // Spamm this!
                     }
                 }
             }
