@@ -891,6 +891,8 @@ void Spell::AddItemTarget(Item* pitem, SpellEffectIndex effIndex)
 
 void Spell::DoAllEffectOnTarget(TargetInfo* target)
 {
+	if(!target)
+		return;
     if (target->processed)                                  // Check target
         return;
     target->processed = true;                               // Target checked in apply effects procedure
@@ -1272,6 +1274,8 @@ void Spell::DoSpellHitOnUnit(Unit* unit, uint32 effectMask, bool isReflected)
 
 void Spell::DoAllEffectOnTarget(GOTargetInfo* target)
 {
+	if(!target)
+		return;
     if (target->processed)                                  // Check target
         return;
     target->processed = true;                               // Target checked in apply effects procedure
@@ -1299,6 +1303,8 @@ void Spell::DoAllEffectOnTarget(GOTargetInfo* target)
 
 void Spell::DoAllEffectOnTarget(ItemTargetInfo* target)
 {
+	if (!target)
+		return;
     uint32 effectMask = target->effectMask;
     if (!target->item || !effectMask)
         return;
@@ -2568,6 +2574,10 @@ void Spell::prepare(SpellCastTargets const* targets, Aura* triggeredByAura)
         SendSpellStart();
 
         TriggerGlobalCooldown();
+
+		// Execute instant spells immediate
+		if (m_timer == 0 && !IsNextMeleeSwingSpell() && !IsAutoRepeat() && !IsChanneledSpell(m_spellInfo))
+			cast();
     }
     // execute triggered without cast time explicitly in call point
     else if (m_timer == 0)
@@ -3012,7 +3022,10 @@ void Spell::update(uint32 difftime)
 
                     // check if player has turned if flag is set
                     if (m_spellInfo->ChannelInterruptFlags & CHANNEL_FLAG_TURNING && m_castOrientation != m_caster->GetOrientation())
-                        cancel();
+					{
+						if (m_spellInfo->Id != 6358)
+							cancel();
+					}
                 }
 
                 // check if there are alive targets left
@@ -4086,6 +4099,21 @@ SpellCastResult Spell::CheckCast(bool strict)
                 }
             }
         }
+
+		switch (m_spellInfo->Id)
+		{
+			case 71:
+			case 2457:
+				if (m_caster->HasAura(23397))
+					return SPELL_FAILED_NOT_IN_CONTROL;
+				break;
+			case 783:
+				if (m_caster->HasAura(23398))
+					return SPELL_FAILED_NOT_IN_CONTROL;
+				break;
+			default:
+				break;
+		}
     }
 
     if (Unit* target = m_targets.getUnitTarget())
@@ -4316,6 +4344,10 @@ SpellCastResult Spell::CheckCast(bool strict)
                              m_caster->GetCharmerOrOwnerPlayerOrPlayerItself());
     if (locRes != SPELL_CAST_OK)
         return locRes;
+
+	if (m_spellInfo->Id == 19937)
+		if (area != 2158)
+			return SPELL_FAILED_REQUIRES_AREA;
 
     // not let players cast spells at mount (and let do it to creatures)
     if (m_caster->IsMounted() && m_caster->GetTypeId() == TYPEID_PLAYER && !m_IsTriggeredSpell &&
@@ -5020,7 +5052,16 @@ SpellCastResult Spell::CheckCast(bool strict)
                     return SPELL_FAILED_CHARMED;
 
                 if (int32(expectedTarget->getLevel()) > CalculateDamage(SpellEffectIndex(i), expectedTarget))
-                    return SPELL_FAILED_HIGHLEVEL;
+				{
+					switch (m_spellInfo->Id)
+					{
+						case 20604:
+						case 20740:
+							break;
+						default:
+							return SPELL_FAILED_HIGHLEVEL;
+					}
+				}
 
                 break;
             }
@@ -5174,7 +5215,7 @@ SpellCastResult Spell::CheckPetCast(Unit* target)
     if (m_caster->isInCombat() && IsNonCombatSpell(m_spellInfo))
         return SPELL_FAILED_AFFECTING_COMBAT;
 
-	if (!target)
+	if (!target && !IsSpellWithCasterSourceTargetsOnly(m_spellInfo))
 		return SPELL_CAST_OK;
 
     if (m_caster->GetTypeId() == TYPEID_UNIT && (((Creature*)m_caster)->IsPet() || m_caster->isCharmed()))
@@ -6064,6 +6105,8 @@ CurrentSpellTypes Spell::GetCurrentContainer()
 
 bool Spell::CheckTarget(Unit* target, SpellEffectIndex eff)
 {
+	if(!m_spellInfo)
+		return false;
     // Check targets for creature type mask and remove not appropriate (skip explicit self target case, maybe need other explicit targets)
     if (m_spellInfo->EffectImplicitTargetA[eff] != TARGET_SELF)
     {
@@ -6151,6 +6194,8 @@ bool Spell::CheckTarget(Unit* target, SpellEffectIndex eff)
 
 bool Spell::IsNeedSendToClient() const
 {
+	if (!m_spellInfo)
+		return false;
     return m_spellInfo->SpellVisual != 0 || IsChanneledSpell(m_spellInfo) ||
            m_spellInfo->speed > 0.0f || (!m_triggeredByAuraSpell && !m_IsTriggeredSpell);
 }

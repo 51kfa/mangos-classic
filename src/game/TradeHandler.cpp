@@ -430,20 +430,40 @@ void WorldSession::HandleAcceptTradeOpcode(WorldPacket& recvPacket)
             return;
         }
 
+		std::stringstream stadelst1;
+		std::stringstream stadelst2;
         // execute trade: 1. remove
         for (int i = 0; i < TRADE_SLOT_TRADED_COUNT; ++i)
         {
             if (Item* item = myItems[i])
             {
+				stadelst1 << item->GetProto()->ItemId << ";";
                 item->SetGuidValue(ITEM_FIELD_GIFTCREATOR, _player->GetObjectGuid());
                 _player->MoveItemFromInventory(item->GetBagSlot(), item->GetSlot(), true);
             }
             if (Item* item = hisItems[i])
             {
+				stadelst2 << item->GetProto()->ItemId << ";";
                 item->SetGuidValue(ITEM_FIELD_GIFTCREATOR, trader->GetObjectGuid());
                 trader->MoveItemFromInventory(item->GetBagSlot(), item->GetSlot(), true);
             }
         }
+		if (my_trade->GetMoney() > 0 || !stadelst1.str().empty())
+		{
+			CharacterDatabase.PExecute("REPLACE INTO trade_log(sguid, rguid, gold, itemlist, tm) VALUES(%u,%u,%u,'%s',NOW())",
+					_player->GetObjectGuid().GetCounter(),
+					trader->GetObjectGuid().GetCounter(),
+					my_trade->GetMoney(),
+					stadelst1.str().c_str());
+		}
+		if (his_trade->GetMoney() > 0 || !stadelst2.str().empty())
+		{
+			CharacterDatabase.PExecute("REPLACE INTO trade_log(sguid, rguid, gold, itemlist, tm) VALUES(%u,%u,%u,'%s',NOW())",
+					trader->GetObjectGuid().GetCounter(),
+					_player->GetObjectGuid().GetCounter(),
+					his_trade->GetMoney(),
+					stadelst2.str().c_str());
+		}
 
         // execute trade: 2. store
         moveItems(myItems, hisItems);

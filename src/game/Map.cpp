@@ -1537,7 +1537,8 @@ void BattleGroundMap::Update(const uint32& diff)
 {
     Map::Update(diff);
 
-    GetBG()->Update(diff);
+    if(GetBG())
+		GetBG()->Update(diff);
 }
 
 BattleGroundPersistentState* BattleGroundMap::GetPersistanceState() const

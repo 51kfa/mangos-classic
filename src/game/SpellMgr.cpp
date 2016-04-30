@@ -394,6 +394,24 @@ bool IsNoStackEx(SpellEntry const* spellInfo_1, SpellEntry const* spellInfo_2)
 		if (spellInfo_1->SpellIconID == 312 || spellInfo_2->SpellIconID == 312)
 			return false;
 	}
+
+	if (spellInfo_1->Id != spellInfo_2->Id)
+	{
+		if (spellInfo_1->Id == 23401 || spellInfo_2->Id == 23401)
+			return false;
+		if (spellInfo_1->Id == 23397 || spellInfo_2->Id == 23397)
+			return false;
+		if (spellInfo_1->Id == 23410 || spellInfo_2->Id == 23410)
+			return false;
+		if (spellInfo_1->Id == 23418 || spellInfo_2->Id == 23418)
+			return false;
+		if (spellInfo_1->Id == 23398 || spellInfo_2->Id == 23398)
+			return false;
+		if (spellInfo_1->Id == 23414 || spellInfo_2->Id == 23414)
+			return false;
+		if (spellInfo_1->Id == 22850 || spellInfo_2->Id == 22850)
+			return false;
+	}
 	return true;
 }
 
@@ -413,6 +431,9 @@ bool IsNoStackAuraDueToAura(uint32 spellId_1, uint32 spellId_2)
 		if ((spellInfo_1->SpellIconID == 453 && spellInfo_2->SpellIconID == 19) || (spellInfo_1->SpellIconID == 19 && spellInfo_2->SpellIconID == 453))
 			return false;
 	}
+
+	if (!IsNoStackEx(spellInfo_1, spellInfo_2))
+		return false;
 
     for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
     {
@@ -1876,6 +1897,16 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
     // Allow stack passive and not passive spells
     if (spellInfo_1->HasAttribute(SPELL_ATTR_PASSIVE) != spellInfo_2->HasAttribute(SPELL_ATTR_PASSIVE))
         return false;
+
+	if (spellInfo_1->Id == 13278 || spellInfo_2->Id == 13278)
+		return false;
+	if (spellInfo_1->Id == 25040 || spellInfo_2->Id == 25040)
+		return false;
+	if (spellInfo_1->Id == 23182 || spellInfo_2->Id == 23182)
+		return false;
+
+	if (!IsNoStackEx(spellInfo_1, spellInfo_2))
+		return false;
 
     // Specific spell family spells
     switch (spellInfo_1->SpellFamilyName)

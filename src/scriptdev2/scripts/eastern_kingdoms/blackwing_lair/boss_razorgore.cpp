@@ -76,7 +76,10 @@ struct boss_razorgoreAI : public ScriptedAI
         {
             // Don't set instance data unless all eggs are destroyed
             if (m_pInstance->GetData(TYPE_RAZORGORE) != SPECIAL)
+			{
+				JustReachedHome();
                 return;
+			}
 
             m_pInstance->SetData(TYPE_RAZORGORE, DONE);
         }
@@ -114,6 +117,9 @@ struct boss_razorgoreAI : public ScriptedAI
     {
         if (m_pInstance)
             m_pInstance->SetData(TYPE_RAZORGORE, FAIL);
+		if (m_creature)
+			if (Creature* pCtrl = GetClosestCreatureWithEntry(m_creature, NPC_GRETHOK_CONTROLLER, 500.0f, false, true))
+				pCtrl->Respawn();
     }
 
     void JustSummoned(Creature* pSummoned) override
@@ -125,6 +131,9 @@ struct boss_razorgoreAI : public ScriptedAI
 
     void UpdateAI(const uint32 uiDiff) override
     {
+		if (!m_creature)
+			return;
+
         if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
         {
             // Set visual only on OOC timer

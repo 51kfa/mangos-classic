@@ -345,6 +345,9 @@ void instance_blackwing_lair::Update(uint32 uiDiff)
         if (!pRazorgore)
             return;
 
+		if (!pRazorgore->isAlive())
+			return;
+
         // Randomize generators
         std::random_shuffle(m_vGeneratorGuids.begin(), m_vGeneratorGuids.end());
 
@@ -355,7 +358,13 @@ void instance_blackwing_lair::Update(uint32 uiDiff)
             if (!pGenerator)
                 return;
 
-            pRazorgore->SummonCreature(aRazorgoreSpawns[i], pGenerator->GetPositionX(), pGenerator->GetPositionY(), pGenerator->GetPositionZ(), pGenerator->GetOrientation(), TEMPSUMMON_DEAD_DESPAWN, 0);
+            if(Creature* pcre = pRazorgore->SummonCreature(aRazorgoreSpawns[i], pGenerator->GetPositionX(), pGenerator->GetPositionY(), pGenerator->GetPositionZ(), pGenerator->GetOrientation(), TEMPSUMMON_DEAD_DESPAWN, 0))
+			{
+				pcre->SetInCombatWithZone();
+				pcre->AddThreat(pRazorgore);
+				if (Unit* ptar = pcre->SelectAttackingTarget(ATTACKING_TARGET_RANDOM, 0))
+					pcre->GetMotionMaster()->MoveChase(ptar);
+			}
         }
 
         m_uiDefenseTimer = 20000;

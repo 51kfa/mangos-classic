@@ -154,6 +154,9 @@ struct boss_vaelastraszAI : public ScriptedAI
 
     void JustReachedHome() override
     {
+		if (m_creature)
+			m_creature->setFaction(35);
+
         if (m_pInstance)
             m_pInstance->SetData(TYPE_VAELASTRASZ, FAIL);
     }

@@ -255,6 +255,8 @@ bool Corpse::LoadFromDB(uint32 lowguid, Field* fields)
 
 bool Corpse::isVisibleForInState(Player const* u, WorldObject const* viewPoint, bool inVisibleList) const
 {
+	if (!u || !viewPoint || !GetMap())
+		return false;
     return IsInWorld() && u->IsInWorld() && IsWithinDistInMap(viewPoint, GetMap()->GetVisibilityDistance() + (inVisibleList ? World::GetVisibleObjectGreyDistance() : 0.0f), false);
 }
 

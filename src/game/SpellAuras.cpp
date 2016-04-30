@@ -1853,6 +1853,8 @@ void Aura::HandleForceReaction(bool apply, bool Real)
         return;
 
     Player* player = (Player*)GetTarget();
+	if (!player || !player->IsInWorld())
+		return;
 
     uint32 faction_id = m_modifier.m_miscvalue;
     ReputationRank faction_rank = ReputationRank(m_modifier.m_amount);
@@ -2587,6 +2589,10 @@ void Aura::HandleAuraModRoot(bool apply, bool Real)
 
     if (apply)
     {
+		if (GetCaster() && GetId() == 23414 && target->GetTypeId() == TYPEID_PLAYER)
+			if (Creature* pcast = GetCaster()->ToCreature())
+				((Player*)target)->TeleportTo(pcast->GetMapId(), pcast->GetPositionX(), pcast->GetPositionY(), pcast->GetPositionZ(), pcast->GetOrientation(), TELE_TO_NOT_LEAVE_COMBAT);
+
         // Frost root aura -> freeze/unfreeze target
         if (GetSpellSchoolMask(GetSpellProto()) & SPELL_SCHOOL_MASK_FROST)
             target->ModifyAuraState(AURA_STATE_FROZEN, apply);
@@ -4350,6 +4356,8 @@ void Aura::PeriodicTick()
             if (!pCaster->isAlive())
                 return;
 
+			if (pCaster->GetMapId() != target->GetMapId())
+				return;
             if (spellProto->Effect[GetEffIndex()] == SPELL_EFFECT_PERSISTENT_AREA_AURA &&
                     pCaster->SpellHitResult(target, spellProto, false) != SPELL_MISS_NONE)
                 return;

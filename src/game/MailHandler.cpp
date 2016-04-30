@@ -200,6 +200,19 @@ void WorldSession::HandleSendMail(WorldPacket& recv_data)
         }
     }
 
+	std::stringstream itemlst;
+	if (item && item->GetProto()->ItemId)
+		itemlst << item->GetProto()->ItemId;
+
+	if (!itemlst.str().empty() || money > 0)
+	{
+		CharacterDatabase.PExecute("REPLACE INTO mail_log(sguid, rguid, gold, itemlist, tm) VALUES(%u,%u,%u,'%s',NOW())",
+				pl->GetObjectGuid().GetCounter(),
+				rc.GetCounter(),
+				money,
+				itemlst.str().c_str());
+	}
+
     pl->SendMailResult(0, MAIL_SEND, MAIL_OK);
 
     pl->ModifyMoney(-int32(reqmoney));
@@ -477,6 +490,18 @@ void WorldSession::HandleMailTakeItem(WorldPacket& recv_data)
         uint32 count = it->GetCount();                      // save counts before store and possible merge with deleting
         pl->MoveItemToInventory(dest, it, true);
 
+		std::stringstream stritem;
+		if (itemId)
+			stritem << itemId;
+		if (!stritem.str().empty())
+		{
+			CharacterDatabase.PExecute("REPLACE INTO mail_log(sguid, rguid, gold, itemlist, tm) VALUES(%u,%u,%u,'%s',NOW())",
+					m->sender,
+					pl->GetObjectGuid().GetCounter(),
+					m->COD,
+					stritem.str().c_str());
+		}
+
         CharacterDatabase.BeginTransaction();
         pl->SaveInventoryAndGoldToDB();
         pl->_SaveMail();
@@ -510,6 +535,14 @@ void WorldSession::HandleMailTakeMoney(WorldPacket& recv_data)
     }
 
     pl->SendMailResult(mailId, MAIL_MONEY_TAKEN, MAIL_OK);
+
+	if (m && m->money > 0)
+	{
+		CharacterDatabase.PExecute("REPLACE INTO mail_log(sguid, rguid, gold, tm) VALUES(%u,%u,%u,NOW())",
+				m->sender,
+				pl->GetObjectGuid().GetCounter(),
+				m->money);
+	}
 
     pl->ModifyMoney(m->money);
     m->money = 0;

@@ -1731,16 +1731,7 @@ SpellEntry const* Creature::ReachWithSpellCure(Unit* pVictim)
             continue;
         }
 
-        bool bcontinue = true;
-        for (int j = 0; j < MAX_EFFECT_INDEX; ++j)
-        {
-            if ((spellInfo->Effect[j] == SPELL_EFFECT_HEAL))
-            {
-                bcontinue = false;
-                break;
-            }
-        }
-        if (bcontinue)
+		if (!spellInfo->HasSpellEffect(SPELL_EFFECT_HEAL))
             continue;
 
         if (spellInfo->manaCost > GetPower(POWER_MANA))
@@ -2172,7 +2163,15 @@ bool Creature::HasCategoryCooldown(uint32 spell_id) const
         return false;
 
     CreatureSpellCooldowns::const_iterator itr = m_CreatureCategoryCooldowns.find(spellInfo->Category);
-    return (itr != m_CreatureCategoryCooldowns.end() && time_t(itr->second + (spellInfo->CategoryRecoveryTime / IN_MILLISECONDS)) > time(nullptr));
+	uint32 CategoryRecoveryTime = spellInfo->CategoryRecoveryTime;
+	if (GetTypeId() == TYPEID_UNIT && GetCharmerOrOwner() && !CategoryRecoveryTime)
+	{
+		if (!spellInfo->Category)
+			CategoryRecoveryTime = 3500;
+		else
+			CategoryRecoveryTime = 15000;
+	}
+    return (itr != m_CreatureCategoryCooldowns.end() && time_t(itr->second + (CategoryRecoveryTime / IN_MILLISECONDS)) > time(nullptr));
 }
 
 bool Creature::HasSpellCooldown(uint32 spell_id) const
