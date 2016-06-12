@@ -177,7 +177,6 @@ UPDATE creature_template SET ScriptName='boss_general_angerforge' WHERE entry=90
 UPDATE creature_template SET ScriptName='boss_high_interrogator_gerstahn' WHERE entry=9018;
 UPDATE creature_template SET ScriptName='npc_grimstone' WHERE entry=10096;
 UPDATE creature_template SET ScriptName='npc_theldren_trigger' WHERE entry=16079;
-UPDATE creature_template SET ScriptName='npc_kharan_mighthammer' WHERE entry=9021;
 UPDATE creature_template SET ScriptName='npc_phalanx' WHERE entry=9502;
 UPDATE creature_template SET ScriptName='npc_mistress_nagmara' WHERE entry=9500;
 UPDATE creature_template SET ScriptName='npc_rocknot' WHERE entry=9503;
@@ -244,6 +243,8 @@ UPDATE gameobject_template SET ScriptName='go_defias_cannon' WHERE entry=16398;
 UPDATE creature_template SET ScriptName='npc_aged_dying_ancient_kodo' WHERE entry IN (4700, 4701, 4702, 11627);
 UPDATE creature_template SET ScriptName='npc_dalinda_malem' WHERE entry=5644;
 UPDATE creature_template SET ScriptName='npc_melizza_brimbuzzle' WHERE entry=12277;
+UPDATE creature_template SET ScriptName='npc_cork_gizelton' WHERE entry=11625;
+UPDATE creature_template SET ScriptName='npc_rigger_gizelton' WHERE entry=11626;
 
 /* DIRE MAUL */
 UPDATE instance_template SET ScriptName='instance_dire_maul' WHERE map=429;
@@ -453,6 +454,7 @@ UPDATE creature_template SET ScriptName='boss_dathrohan_balnazzar' WHERE entry=1
 UPDATE creature_template SET ScriptName='boss_maleki_the_pallid' WHERE entry=10438;
 UPDATE creature_template SET ScriptName='boss_cannon_master_willey' WHERE entry=10997;
 UPDATE creature_template SET ScriptName='boss_baroness_anastari' WHERE entry=10436;
+UPDATE creature_template SET ScriptName='npc_aurius' WHERE entry=10917;
 UPDATE creature_template SET ScriptName='mobs_spectral_ghostly_citizen' WHERE entry IN (10384,10385);
 UPDATE creature_template SET ScriptName='mob_restless_soul' WHERE entry=11122;
 UPDATE gameobject_template SET ScriptName='go_gauntlet_gate' WHERE entry=175357;
@@ -1597,7 +1599,43 @@ INSERT INTO script_texts (entry,content_default,sound,type,language,emote,commen
 (-1001164,'I can sens it now, $N. Ashenvale lies down this path.',0,0,0,0,'arei SAY_ASHENVALE'),
 (-1001165,'I feel... something strange...',0,0,0,0,'arei SAY_TRANSFORM'),
 (-1001166,'$N my form has now changed! The true strength of my spirit is returing to me now... The cursed grasp of the forest is leaving me.',0,0,0,0,'arei SAY_LIFT_CURSE'),
-(-1001167,'Thank you, $N. Now my spirit will finally be at peace.',0,0,0,0,'arei SAY_ESCORT_COMPLETE');
+(-1001167,'Thank you, $N. Now my spirit will finally be at peace.',0,0,0,0,'arei SAY_ESCORT_COMPLETE'),
+
+(-1001168,'REUSE ME',0,0,0,0,'REUSE_ME'),
+(-1001169,'REUSE ME',0,0,0,0,'REUSE_ME'),
+
+(-1001170,'REUSE ME',0,0,0,0,'REUSE_ME'),
+(-1001171,'REUSE ME',0,0,0,0,'REUSE_ME'),
+
+(-1001172,'REUSE ME',0,0,0,0,'REUSE_ME'),
+
+(-1001173,'REUSE ME',0,0,0,0,'REUSE_ME'),
+(-1001174,'REUSE ME',0,0,0,0,'REUSE_ME'),
+(-1001175,'REUSE ME',0,0,0,0,'REUSE_ME'),
+(-1001176,'REUSE ME',0,0,0,0,'REUSE_ME'),
+(-1001177,'REUSE ME',0,0,0,0,'REUSE_ME'),
+(-1001178,'REUSE ME',0,0,0,0,'REUSE_ME'),
+(-1001179,'REUSE ME',0,0,0,0,'REUSE_ME'),
+(-1001180,'REUSE ME',0,0,0,0,'REUSE_ME'),
+(-1001181,'REUSE ME',0,0,0,0,'REUSE_ME'),
+(-1001182,'REUSE ME',0,0,0,0,'REUSE_ME'),
+(-1001183,'REUSE ME',0,0,0,0,'REUSE_ME'),
+
+(-1001184,'REUSE ME',0,0,0,0,'REUSE_ME'),
+(-1001185,'REUSE ME',0,0,0,0,'REUSE_ME'),
+(-1001186,'REUSE ME',0,0,0,0,'REUSE_ME'),
+(-1001187,'REUSE ME',0,0,0,0,'REUSE_ME'),
+(-1001188,'REUSE ME',0,0,0,0,'REUSE_ME'),
+(-1001189,'REUSE ME',0,0,0,0,'REUSE_ME'),
+(-1001190,'REUSE ME',0,0,0,0,'REUSE_ME'),
+
+(-1001191,'Hey, you call yourself a body guard? Get to work and protect us...',0,0,0,0,'SAY_CORK_AMBUSH1'),
+(-1001192,'Mister body guard, are you going to earn your money or what?',0,0,0,0,'SAY_CORK_AMBUSH2'),
+(-1001193,'You\'re fired! <Cough...Cork clears throat.> I mean, help!',0,0,0,0,'SAY_CORK_AMBUSH3'),
+(-1001194,'Blast those stupid centaurs! Sigh - well, it seems you kept your bargain. Up the road you shall find Smeed Scrabblescrew, he has your money.',0,0,0,1,'SAY_CORK_END'),
+(-1001195,'Eeck! Demons hungry for the kodos!',0,0,0,0,'SAY_RIGGER_AMBUSH1'),
+(-1001196,'What am I paying you for? The kodos are nearly dead!',0,0,0,0,'SAY_RIGGER_AMBUSH2'),
+(-1001197,'Wow! We did it... not sure why we thought we needed the likes of you. Nevertheless, speak with Smeed Srablescrew; he will give you your earnings!',0,0,0,0,'SAY_RIGGER_END');
 
 -- -1 033 000 SHADOWFANG KEEP
 INSERT INTO script_texts (entry,content_default,sound,type,language,emote,comment) VALUES
@@ -1973,7 +2011,12 @@ INSERT INTO script_texts (entry,content_default,sound,type,language,emote,commen
 
 (-1329016,'Today you have unmade what took me years to create! For this you shall all die by my hand!',0,1,0,0,'dathrohan SAY_AGGRO'),
 (-1329017,'You fools think you can defeat me so easily? Face the true might of the Nathrezim!',0,1,0,0,'dathrohan SAY_TRANSFORM'),
-(-1329018,'Damn you mortals! All my plans of revenge, all my hate... all burned to ash...',0,0,0,0,'dathrohan SAY_DEATH');
+(-1329018,'Damn you mortals! All my plans of revenge, all my hate... all burned to ash...',0,0,0,0,'dathrohan SAY_DEATH'),
+(-1329019,'Don\'t worry about me!  Slay this dreadful beast and cleanse this world of his foul taint!',0,6,0,0,'ysida YSIDA_SAY_RUN_5_MIN'),
+(-1329020,'My death means nothing.... light... will... prevail!',0,6,0,0,'ysida YSIDA_SAY_RUN_FAIL'),
+
+(-1329021,'Rivendare! I come for you!',0,1,0,0,'aurius YELL_AURIUS_AGGRO'),
+(-1329022,'Argh!',0,0,0,0,'aurius SAY_AURIUS_DEATH');
 
 -- -1 349 000 MARAUDON
 
