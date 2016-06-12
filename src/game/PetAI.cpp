@@ -53,8 +53,8 @@ void PetAI::MoveInLineOfSight(Unit* u)
     if (!m_creature->GetCharmInfo() || !m_creature->GetCharmInfo()->HasReactState(REACT_AGGRESSIVE))
         return;
 
-    if (u->isTargetableForAttack() && m_creature->IsHostileTo(u) &&
-            u->isInAccessablePlaceFor(m_creature))
+	if (u->isTargetableForAttack() && u->isInAccessablePlaceFor(m_creature) &&
+		(m_creature->IsHostileTo(u) || u->IsHostileTo(m_creature->GetCharmerOrOwner())))
     {
         float attackRadius = m_creature->GetAttackDistance(u);
         if (m_creature->IsWithinDistInMap(u, attackRadius) && m_creature->GetDistanceZ(u) <= CREATURE_Z_ATTACK_RANGE)
@@ -79,6 +79,7 @@ void PetAI::AttackStart(Unit* u)
         // thus with the following clear the original TMG gets invalidated and crash, doh
         // hope it doesn't start to leak memory without this :-/
         // i_pet->Clear();
+		m_creature->UpdateSpeed(MOVE_RUN, false);
         HandleMovementOnAttackStart(u);
         inCombat = true;
     }
@@ -104,20 +105,37 @@ bool PetAI::_needToStop() const
 
 void PetAI::_stopAttack()
 {
-    inCombat = false;
+	inCombat = false;
 
-    Unit* owner = m_creature->GetCharmerOrOwner();
+	bool useDefaultMovement = true;
 
-    if (owner && m_creature->GetCharmInfo() && m_creature->GetCharmInfo()->HasCommandState(COMMAND_FOLLOW))
-    {
-        m_creature->GetMotionMaster()->MoveFollow(owner, PET_FOLLOW_DIST, PET_FOLLOW_ANGLE);
-    }
-    else
-    {
-        m_creature->GetMotionMaster()->Clear(false);
-        m_creature->GetMotionMaster()->MoveIdle();
-    }
-    m_creature->AttackStop();
+	if (Unit* owner = m_creature->GetCharmerOrOwner())
+	{
+		if (CharmInfo* charmInfo = m_creature->GetCharmInfo())
+		{
+			if (Pet* pet = (Pet*)m_creature)
+			{
+				if (charmInfo->HasCommandState(COMMAND_FOLLOW))
+					pet->GetMotionMaster()->MoveFollow(owner, PET_FOLLOW_DIST, PET_FOLLOW_ANGLE);
+				else if (charmInfo->HasCommandState(COMMAND_STAY))
+				{
+					//if stay command is already set but we dont have stay pos set then we need to establish current pos as stay position
+					if (!pet->IsStayPosSet())
+						pet->SetStayPosition();
+
+					pet->GetMotionMaster()->MovePoint(0, pet->GetStayPosX(), pet->GetStayPosY(), pet->GetStayPosZ(), false);
+				}
+				useDefaultMovement = false;
+			}
+		}
+	}
+
+	m_creature->AttackStop();
+	if (useDefaultMovement)
+	{
+		m_creature->GetMotionMaster()->Clear(false);
+		m_creature->GetMotionMaster()->MoveIdle();
+	}
 }
 
 void PetAI::UpdateAI(const uint32 diff)
@@ -174,16 +192,23 @@ void PetAI::UpdateAI(const uint32 diff)
     }
     else if (owner && m_creature->GetCharmInfo())
     {
-        if (owner->isInCombat() && !(m_creature->GetCharmInfo()->HasReactState(REACT_PASSIVE) || m_creature->GetCharmInfo()->HasCommandState(COMMAND_STAY)))
+        if (owner->isInCombat() && !m_creature->GetCharmInfo()->HasReactState(REACT_PASSIVE))
         {
             AttackStart(owner->getAttackerForHelper());
         }
         else if (m_creature->GetCharmInfo()->HasCommandState(COMMAND_FOLLOW))
         {
-            if (!m_creature->hasUnitState(UNIT_STAT_FOLLOW))
-            {
-                m_creature->GetMotionMaster()->MoveFollow(owner, PET_FOLLOW_DIST, PET_FOLLOW_ANGLE);
-            }
+			// The distance is to prevent the pet from running around to reach the owners back when  walking towards it
+			//  and the reason for increasing it more than the follow distance is to prevent the same thing
+			// from happening when the owner turns and twists (as this increases the distance between them)
+			if (!m_creature->hasUnitState(UNIT_STAT_FOLLOW) && !owner->IsWithinDistInMap(m_creature, (PET_FOLLOW_DIST * 2)))
+				m_creature->GetMotionMaster()->MoveFollow(owner, PET_FOLLOW_DIST, PET_FOLLOW_ANGLE);
+			// This is to stop the pet from following you when you're close to each other, to support the above condition.
+			else
+			{
+				m_creature->GetMotionMaster()->Clear(false);
+				m_creature->GetMotionMaster()->MoveIdle();
+			}
         }
     }
 
@@ -218,27 +243,20 @@ void PetAI::UpdateAI(const uint32 diff)
                 // Consume Shadows, Lesser Invisibility, so ignore checks for its
                 if (!IsNonCombatSpell(spellInfo))
                 {
-                    // allow only spell without spell cost or with spell cost but not duration limit
-                    int32 duration = GetSpellDuration(spellInfo);
-                    if ((spellInfo->manaCost || spellInfo->ManaCostPercentage || spellInfo->manaPerSecond) && duration > 0)
-                        continue;
+					int32 duration = GetSpellDuration(spellInfo);
+					int32 cooldown = GetSpellRecoveryTime(spellInfo);
 
-                    // allow only spell without cooldown > duration
-                    int32 cooldown = GetSpellRecoveryTime(spellInfo);
-                    if (cooldown >= 0 && duration >= 0 && cooldown > duration)
-                        continue;
+					// allow only spell not on cooldown
+					if (cooldown != 0 && duration < cooldown)
+						continue;
 
-                    // not allow instant kill autocasts as full health cost
-					if (spellInfo->HasSpellEffect(SPELL_EFFECT_INSTAKILL))
-                        continue;
+					// not allow instant kill autocasts as full health cost
+					if (IsSpellHaveEffect(spellInfo, SPELL_EFFECT_INSTAKILL))
+						continue;
                 }
             }
-            else
-            {
-                // just ignore non-combat spells
-                if (IsNonCombatSpell(spellInfo))
+            else if (IsNonCombatSpell(spellInfo))
                     continue;
-            }
 
             Spell* spell = new Spell(m_creature, spellInfo, false);
 
@@ -297,7 +315,7 @@ void PetAI::UpdateAI(const uint32 diff)
             if (m_creature->IsPet())
                 ((Pet*)m_creature)->CheckLearning(spell->m_spellInfo->Id);
 
-            spell->prepare(&targets);
+			spell->SpellStart(&targets);
         }
 
         // deleted cached Spell objects
@@ -353,8 +371,7 @@ void PetAI::UpdateAllies()
 
 void PetAI::AttackedBy(Unit* attacker)
 {
-    // when attacked, fight back in case 1)no victim already AND 2)not set to passive AND 3)not set to stay, unless can it can reach attacker with melee attack anyway
-    if (!m_creature->getVictim() && m_creature->GetCharmInfo() && !m_creature->GetCharmInfo()->HasReactState(REACT_PASSIVE) &&
-            (!m_creature->GetCharmInfo()->HasCommandState(COMMAND_STAY) || m_creature->CanReachWithMeleeAttack(attacker)))
-        AttackStart(attacker);
+	// when attacked, fight back in case 1)no victim already AND 2)not set to passive AND 3)not set to stay, unless can it can reach attacker with melee attack anyway
+	if (!m_creature->getVictim() && m_creature->GetCharmInfo() && !m_creature->GetCharmInfo()->HasReactState(REACT_PASSIVE))
+		AttackStart(attacker);
 }

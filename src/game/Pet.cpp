@@ -54,7 +54,8 @@ Pet::Pet(PetType type) :
     m_TrainingPoints(0), m_resetTalentsCost(0), m_resetTalentsTime(0),
     m_removed(false), m_happinessTimer(7500), m_loyaltyTimer(12000), m_petType(type), m_duration(0),
     m_loyaltyPoints(0), m_bonusdamage(0), m_auraUpdateMask(0), m_loading(false),
-    m_petModeFlags(PET_MODE_DEFAULT)
+    m_petModeFlags(PET_MODE_DEFAULT),
+	m_stayPosSet(false), m_stayPosX(0), m_stayPosY(0), m_stayPosZ(0), m_stayPosO(0)
 {
     m_name = "Pet";
     m_regenTimer = 4000;
@@ -194,8 +195,8 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petentry, uint32 petnumber, bool c
     CreatureInfo const* cinfo = GetCreatureInfo();
     if (cinfo->CreatureType == CREATURE_TYPE_CRITTER)
     {
+		pos.GetMap()->Add((Creature*)this);
         AIM_Initialize();
-        pos.GetMap()->Add((Creature*)this);
         delete result;
         return true;
     }
@@ -323,8 +324,8 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petentry, uint32 petnumber, bool c
         SetPower(powerType, savedpower > GetMaxPower(powerType) ? GetMaxPower(powerType) : savedpower);
     }
 
+	map->Add((Creature*)this);
     AIM_Initialize();
-    map->Add((Creature*)this);
 
     // Spells should be loaded after pet is added to map, because in CheckCast is check on it
     _LoadSpells();
@@ -2012,14 +2013,7 @@ void Pet::CastPetAura(PetAura const* aura)
     uint32 auraId = aura->GetAura(GetEntry());
     if (!auraId)
         return;
-
-    if (auraId == 35696)                                    // Demonic Knowledge
-    {
-        int32 basePoints = int32(aura->GetDamage() * (GetStat(STAT_STAMINA) + GetStat(STAT_INTELLECT)) / 100);
-        CastCustomSpell(this, auraId, &basePoints, nullptr, nullptr, true);
-    }
-    else
-        CastSpell(this, auraId, true);
+	CastSpell(this, auraId, true);
 }
 
 void Pet::SynchronizeLevelWithOwner()

@@ -84,7 +84,7 @@ float  World::m_relocation_lower_limit_sq     = 10.f * 10.f;
 uint32 World::m_relocation_ai_notify_delay    = 1000u;
 
 /// World constructor
-World::World()
+World::World() : mail_timer(0), mail_timer_expires(0)
 {
     m_playerLimit = 0;
     m_allowMovement = true;
@@ -116,24 +116,24 @@ World::World()
 /// World destructor
 World::~World()
 {
-    ///- Empty the kicked session set
-    while (!m_sessions.empty())
-    {
-        // not remove from queue, prevent loading new sessions
-        delete m_sessions.begin()->second;
-        m_sessions.erase(m_sessions.begin());
-    }
+    // it is assumed that no other thread is accessing this data when the destructor is called.  therefore, no locks are necessary
 
-    CliCommandHolder* command = nullptr;
-    while (cliCmdQueue.next(command))
-        delete command;
+    ///- Empty the kicked session set
+	while (!m_sessions.empty())
+	{
+		// not remove from queue, prevent loading new sessions
+		delete m_sessions.begin()->second;
+		m_sessions.erase(m_sessions.begin());
+	}
+
+	CliCommandHolder* command = nullptr;
+	while (cliCmdQueue.next(command))
+		delete command;
 
     VMAP::VMapFactory::clear();
     MMAP::MMapFactory::clear();
 
     delete m_configForceLoadMapIds;
-
-    // TODO free addSessQueue
 }
 
 /// Cleanups before world stop
@@ -173,7 +173,7 @@ bool World::RemoveSession(uint32 id)
 
 void World::AddSession(WorldSession* s)
 {
-    addSessQueue.add(s);
+	addSessQueue.add(s);
 }
 
 void
@@ -1788,9 +1788,9 @@ void World::ShutdownCancel()
 void World::UpdateSessions(uint32 /*diff*/)
 {
     ///- Add new sessions
-    WorldSession* sess;
-    while (addSessQueue.next(sess))
-        AddSession_(sess);
+	WorldSession* sess;
+	while (addSessQueue.next(sess))
+		AddSession_(sess);
 
     ///- Then send an update signal to remaining ones
     for (SessionMap::iterator itr = m_sessions.begin(), next; itr != m_sessions.end(); itr = next)
@@ -1854,8 +1854,8 @@ void World::InitServerMaintenanceCheck()
 // This handles the issued and queued CLI/RA commands
 void World::ProcessCliCommands()
 {
-    CliCommandHolder* command;
-    while (cliCmdQueue.next(command))
+	CliCommandHolder* command;
+	while (cliCmdQueue.next(command))
     {
         DEBUG_LOG("CLI command under processing...");
         CliCommandHolder::Print* zprint = command->m_print;

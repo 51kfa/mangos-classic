@@ -7,7 +7,7 @@
 
 enum
 {
-    MAX_ENCOUNTER               = 10,
+    MAX_ENCOUNTER               = 9,
     MAX_SILVERHAND              = 5,
     MAX_ZIGGURATS               = 3,
 
@@ -20,7 +20,6 @@ enum
     TYPE_BARTHILAS_RUN          = 6,
     TYPE_BLACK_GUARDS           = 7,
     TYPE_POSTMASTER             = 8,
-    TYPE_TRUE_MASTERS           = 9,
 
     NPC_TIMMY_THE_CRUEL         = 10808,
     NPC_BARTHILAS               = 10435,
@@ -42,12 +41,6 @@ enum
     NPC_CRIMSON_GUARDSMAN       = 10418,
     NPC_CRIMSON_CONJURER        = 10419,
     NPC_UNDEAD_POSTMAN          = 11142,
-    NPC_GREGOR_THE_JUSTICIAR    = 17910,                    // related to quest "True Masters of the Light"
-    NPC_CATHELA_THE_SEEKER      = 17911,
-    NPC_NEMAS_THE_ARBITER       = 17912,
-    NPC_AELMAR_THE_VANQUISHER   = 17913,
-    NPC_VICAR_HYERONIMUS        = 17914,
-    NPC_PALADIN_QUEST_CREDIT    = 17915,
 
     GO_SERVICE_ENTRANCE         = 175368,
     GO_GAUNTLET_GATE1           = 175357,
@@ -63,7 +56,9 @@ enum
     GO_YSIDA_CAGE               = 181071,                   // Cage to open after baron event is done
 
     QUEST_DEAD_MAN_PLEA         = 8945,
-    SPELL_BARON_ULTIMATUM       = 27861,
+    SPELL_BARON_ULTIMATUM       = 27861,                    // Aura for player during the run (visual icon)
+    SPELL_BARON_SOUL_DRAIN      = 27640,                    // Used by the Baron to kill Ysida
+    SPELL_YSIDA_FREED           = 27773,                    // Argent Dawn extra-reputation reward on successful Baron run
     SPELL_SUMMON_POSTMASTER     = 24627,
 
     SAY_ANNOUNCE_ZIGGURAT_1     = -1329004,
@@ -75,7 +70,9 @@ enum
     SAY_ANNOUNCE_RUN_START      = -1329009,
     SAY_ANNOUNCE_RUN_10_MIN     = -1329010,
     SAY_ANNOUNCE_RUN_5_MIN      = -1329011,
+    YSIDA_SAY_RUN_5_MIN         = -1329019,
     SAY_ANNOUNCE_RUN_FAIL       = -1329012,
+    YSIDA_SAY_RUN_FAIL          = -1329020,
     SAY_ANNOUNCE_RAMSTEIN       = -1329013,
     SAY_UNDEAD_DEFEAT           = -1329014,
     SAY_EPILOGUE                = -1329015,
@@ -95,7 +92,8 @@ static const EventLocation aStratholmeLocation[] =
     {3969.357f, -3391.871f, 119.116f, 5.91f},               // Skeletons summon loc
     {4033.044f, -3431.031f, 119.055f},                      // Skeletons move loc
     {4032.602f, -3378.506f, 119.752f, 4.74f},               // Guards summon loc
-    {4042.575f, -3337.929f, 115.059f}                       // Ysida move loc
+    {4044.78f,  -3333.68f,  117.26f,  4.15f},               // Ysida summon loc
+    {4041.9f,   -3337.6f,   115.06f,  3.82f}                // Ysida move/death loc
 };
 
 static const EventLocation aTimmyLocation[] =
@@ -150,7 +148,6 @@ class instance_stratholme : public ScriptedInstance
         uint32 m_uiYellCounter;
         uint32 m_uiMindlessCount;
         uint8 m_uiPostboxesUsed;
-        uint8 m_uiSilverHandKilled;
 
         ZigguratStore m_zigguratStorage[MAX_ZIGGURATS];
 

@@ -95,7 +95,7 @@ struct boss_flamegorAI : public ScriptedAI
                 if (m_creature->getThreatManager().getThreat(m_creature->getVictim()))
                     m_creature->getThreatManager().modifyThreatPercent(m_creature->getVictim(), -75);
 
-                m_uiWingBuffetTimer = 25000;
+                m_uiWingBuffetTimer = 30000;
             }
         }
         else

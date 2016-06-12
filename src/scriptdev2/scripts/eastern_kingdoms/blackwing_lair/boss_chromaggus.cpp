@@ -214,7 +214,7 @@ struct boss_chromaggusAI : public ScriptedAI
                 }
             }
 
-            m_uiAfflictionTimer = 10000;
+            m_uiAfflictionTimer = urand(5000, 18000);
         }
         else
             m_uiAfflictionTimer -= uiDiff;

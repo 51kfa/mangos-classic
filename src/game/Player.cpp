@@ -1980,6 +1980,9 @@ Creature* Player::GetNPCIfCanInteractWith(ObjectGuid guid, uint32 npcflagmask)
     if (!guid || !IsInWorld() || IsTaxiFlying())
         return nullptr;
 
+	// set player as interacting
+	DoInteraction(guid);
+
     // not in interactive state
     if (hasUnitState(UNIT_STAT_CAN_NOT_REACT_OR_LOST_CONTROL))
         return nullptr;
@@ -2021,11 +2024,14 @@ Creature* Player::GetNPCIfCanInteractWith(ObjectGuid guid, uint32 npcflagmask)
     return unit;
 }
 
-GameObject* Player::GetGameObjectIfCanInteractWith(ObjectGuid guid, uint32 gameobject_type) const
+GameObject* Player::GetGameObjectIfCanInteractWith(ObjectGuid guid, uint32 gameobject_type)
 {
     // some basic checks
     if (!guid || !IsInWorld() || IsTaxiFlying())
         return nullptr;
+
+	// set player as interacting
+	DoInteraction(guid);
 
     // not in interactive state
     if (hasUnitState(UNIT_STAT_CAN_NOT_REACT_OR_LOST_CONTROL))
@@ -6888,7 +6894,7 @@ void Player::CastItemUseSpell(Item* item, SpellCastTargets const& targets)
 
         Spell* spell = new Spell(this, spellInfo, (count > 0));
         spell->m_CastItem = item;
-        spell->prepare(&targets);
+		spell->SpellStart(&targets);
 
         ++count;
     }
@@ -8793,6 +8799,10 @@ InventoryResult Player::CanEquipItem(uint8 slot, uint16& dest, Item* pItem, bool
 
                 if (IsNonMeleeSpellCasted(false))
                     return EQUIP_ERR_CANT_DO_RIGHT_NOW;
+
+				// prevent equip item in Spirit of Redemption (Aura: 27827)
+				if (HasAuraType(SPELL_AURA_SPIRIT_OF_REDEMPTION))
+					return EQUIP_ERR_CANT_DO_RIGHT_NOW;
             }
 
             uint8 eslot = FindEquipSlot(pProto, slot, swap);
@@ -18311,7 +18321,7 @@ void Player::HandleFall(MovementInfo const& movementInfo)
     // 14.57 can be calculated by resolving damageperc formula below to 0
     if (z_diff >= 14.57f && !isDead() && !isGameMaster() && !HasMovementFlag(MOVEFLAG_ONTRANSPORT) &&
             !HasAuraType(SPELL_AURA_HOVER) && !HasAuraType(SPELL_AURA_FEATHER_FALL) &&
-            !IsImmunedToDamage(SPELL_SCHOOL_MASK_NORMAL))
+            !IsImmuneToDamage(SPELL_SCHOOL_MASK_NORMAL))
     {
         // Safe fall, fall height reduction
         int32 safe_fall = GetTotalAuraModifier(SPELL_AURA_SAFE_FALL);
@@ -18764,4 +18774,19 @@ float Player::ComputeRest(time_t timePassed, bool offline /*= false*/, bool inRe
             bonus *= sWorld.getConfig(CONFIG_FLOAT_RATE_REST_OFFLINE_IN_WILDERNESS) / 4.0f; // bonus is reduced by 4 when not in rest place
     }
     return bonus;
+}
+// player is interacting so we have to remove non authorized aura
+void Player::DoInteraction(ObjectGuid const& interactObjGuid)
+{
+	if (interactObjGuid.IsUnit())
+	{
+		// remove some aura like stealth aura
+		RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TALK);
+	}
+	else if (interactObjGuid.IsGameObject())
+	{
+		// remove some aura like stealth aura
+		RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_USE);
+	}
+	SendForcedObjectUpdate();
 }

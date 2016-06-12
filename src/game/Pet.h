@@ -144,7 +144,7 @@ extern const uint32 LevelStartLoyalty[6];
 #define ACTIVE_SPELLS_MAX           4
 
 #define PET_FOLLOW_DIST  1.0f
-#define PET_FOLLOW_ANGLE (M_PI_F/2.0f)
+#define PET_FOLLOW_ANGLE (M_PI_F / 4.00f) * 3.50f
 
 class Player;
 
@@ -251,6 +251,37 @@ class MANGOS_DLL_SPEC Pet : public Creature
         bool unlearnSpell(uint32 spell_id, bool learn_prev, bool clear_ab = true);
         bool removeSpell(uint32 spell_id, bool learn_prev, bool clear_ab = true);
         void CleanupActionBar();
+
+		bool m_stayPosSet;
+		float m_stayPosX;
+		float m_stayPosY;
+		float m_stayPosZ;
+		float m_stayPosO;
+
+		bool IsStayPosSet() { return m_stayPosSet; }
+
+		float GetStayPosX() { return m_stayPosX; }
+		float GetStayPosY() { return m_stayPosY; }
+		float GetStayPosZ() { return m_stayPosZ; }
+		float GetStayPosO() { return m_stayPosO; }
+
+		void SetStayPosition()
+		{
+			m_stayPosX = GetPositionX();
+			m_stayPosY = GetPositionY();
+			m_stayPosZ = GetPositionZ();
+			m_stayPosO = GetOrientation();
+			m_stayPosSet = true;
+		}
+
+		void ClearStayPosition()
+		{
+			m_stayPosSet = false;
+			m_stayPosX = 0;
+			m_stayPosY = 0;
+			m_stayPosZ = 0;
+			m_stayPosO = 0;
+		}
 
         PetSpellMap     m_spells;
         TeachSpellMap   m_teachspells;

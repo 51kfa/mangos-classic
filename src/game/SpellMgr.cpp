@@ -411,6 +411,8 @@ bool IsNoStackEx(SpellEntry const* spellInfo_1, SpellEntry const* spellInfo_2)
 			return false;
 		if (spellInfo_1->Id == 22850 || spellInfo_2->Id == 22850)
 			return false;
+		if (spellInfo_1->Id == 28747 || spellInfo_2->Id == 28747)
+			return false;
 	}
 	return true;
 }

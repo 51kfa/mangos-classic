@@ -48,8 +48,8 @@ struct boss_firemawAI : public ScriptedAI
 
     void Reset() override
     {
-        m_uiShadowFlameTimer = 30000;                       // These times are probably wrong
-        m_uiWingBuffetTimer = 24000;
+        m_uiShadowFlameTimer = 20000;                       // These times are probably wrong
+        m_uiWingBuffetTimer = 30000;
         m_uiFlameBuffetTimer = 5000;
     }
 
@@ -93,7 +93,7 @@ struct boss_firemawAI : public ScriptedAI
                 if (m_creature->getThreatManager().getThreat(m_creature->getVictim()))
                     m_creature->getThreatManager().modifyThreatPercent(m_creature->getVictim(), -75);
 
-                m_uiWingBuffetTimer = 25000;
+                m_uiWingBuffetTimer = 30000;
             }
         }
         else

@@ -359,7 +359,14 @@ bool Creature::UpdateEntry(uint32 Entry, Team team, const CreatureData* data /*=
     SetSheath(SHEATH_STATE_MELEE);
     SetByteValue(UNIT_FIELD_BYTES_2, 1, UNIT_BYTE2_FLAG_AURAS);
 
-    SelectLevel(GetCreatureInfo(), preserveHPAndPower ? GetHealthPercent() : 100.0f);
+	if (preserveHPAndPower)
+	{
+		uint32 healthPercent = GetHealthPercent();
+		SelectLevel();
+		SetHealthPercent(healthPercent);
+	}
+	else
+		SelectLevel();
 
     if (team == HORDE)
         setFaction(GetCreatureInfo()->FactionHorde);
@@ -415,9 +422,10 @@ bool Creature::UpdateEntry(uint32 Entry, Team team, const CreatureData* data /*=
     CreatureTemplateSpells const* templateSpells = sCreatureTemplateSpellsStorage.LookupEntry<CreatureTemplateSpells>(GetCreatureInfo()->Entry);
     if (!templateSpells)
         templateSpells = sCreatureTemplateSpellsStorage.LookupEntry<CreatureTemplateSpells>(GetEntry());
-    if (templateSpells)
-        for (int i = 0; i < CREATURE_MAX_SPELLS; ++i)
-            m_spells[i] = templateSpells->spells[i];
+
+	if (templateSpells)
+		for (int i = 0; i < CREATURE_MAX_SPELLS; ++i)
+			m_spells[i] = templateSpells->spells[i];
 
     // if eventData set then event active and need apply spell_start
     if (eventData)
@@ -506,7 +514,7 @@ void Creature::Update(uint32 update_diff, uint32 diff)
 
                 CreatureInfo const* cinfo = GetCreatureInfo();
 
-                SelectLevel(cinfo);
+                SelectLevel();
                 UpdateAllStats();  // to be sure stats is correct regarding level of the creature
                 SetUInt32Value(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_NONE);
                 if (m_isDeadByDefault)
@@ -1121,112 +1129,126 @@ void Creature::SaveToDB(uint32 mapid)
     WorldDatabase.CommitTransaction();
 }
 
-void Creature::SelectLevel(const CreatureInfo* cinfo, float percentHealth /*= 100.0f*/)
+void Creature::SelectLevel(uint32 forcedLevel /*= USE_DEFAULT_DATABASE_LEVEL*/)
 {
-    uint32 rank = IsPet() ? 0 : cinfo->Rank;    // TODO :: IsPet probably not needed here
+	CreatureInfo const* cinfo = GetCreatureInfo();
+	if (!cinfo)
+		return;
 
-    // level
-    uint32 const minlevel = cinfo->MinLevel;
-    uint32 const maxlevel = cinfo->MaxLevel;
-    uint32 level = minlevel == maxlevel ? minlevel : urand(minlevel, maxlevel);
-    SetLevel(level);
+	uint32 rank = IsPet() ? 0 : cinfo->Rank;                // TODO :: IsPet probably not needed here
 
-    //////////////////////////////////////////////////////////////////////////
-    // Calculate level dependent stats
-    //////////////////////////////////////////////////////////////////////////
+	// level
+	uint32 level = forcedLevel;
+	uint32 const minlevel = cinfo->MinLevel;
+	uint32 const maxlevel = cinfo->MaxLevel;
 
-    uint32 health;
-    uint32 mana;
+	if (level == USE_DEFAULT_DATABASE_LEVEL)
+		level = minlevel == maxlevel ? minlevel : urand(minlevel, maxlevel);
 
-    // TODO: Remove cinfo->ArmorMultiplier test workaround to disable classlevelstats when DB is ready
-    CreatureClassLvlStats const* cCLS = sObjectMgr.GetCreatureClassLvlStats(level, cinfo->UnitClass);
-    if (cinfo->ArmorMultiplier > 0 && cCLS)
-    {
-        // Use Creature Stats to calculate stat values
+	SetLevel(level);
 
-        // health
-        health = cCLS->BaseHealth * cinfo->HealthMultiplier;
+	//////////////////////////////////////////////////////////////////////////
+	// Calculate level dependent stats
+	//////////////////////////////////////////////////////////////////////////
 
-        // mana
-        mana = cCLS->BaseMana * cinfo->PowerMultiplier;
-    }
-    else
-    {
-        // Use old style to calculate stat values
-        float rellevel = maxlevel == minlevel ? 0 : (float(level - minlevel)) / (maxlevel - minlevel);
+	uint32 health;
+	uint32 mana;
 
-        // health
-        uint32 minhealth = std::min(cinfo->MaxLevelHealth, cinfo->MinLevelHealth);
-        uint32 maxhealth = std::max(cinfo->MaxLevelHealth, cinfo->MinLevelHealth);
-        health = uint32(minhealth + uint32(rellevel * (maxhealth - minhealth)));
+	// TODO: Remove cinfo->ArmorMultiplier test workaround to disable classlevelstats when DB is ready
+	CreatureClassLvlStats const* cCLS = sObjectMgr.GetCreatureClassLvlStats(level, cinfo->UnitClass);
+	if (cinfo->ArmorMultiplier > 0 && cCLS)
+	{
+		// Use Creature Stats to calculate stat values
 
-        // mana
-        uint32 minmana = std::min(cinfo->MaxLevelMana, cinfo->MinLevelMana);
-        uint32 maxmana = std::max(cinfo->MaxLevelMana, cinfo->MinLevelMana);
-        mana = minmana + uint32(rellevel * (maxmana - minmana));
-    }
+		// health
+		health = cCLS->BaseHealth * cinfo->HealthMultiplier;
 
-    health *= _GetHealthMod(rank); // Apply custom config setting
-    if (health < 1)
-        health = 1;
+		// mana
+		mana = cCLS->BaseMana * cinfo->PowerMultiplier;
+	}
+	else
+	{
+		if (forcedLevel == USE_DEFAULT_DATABASE_LEVEL || (forcedLevel >= minlevel && forcedLevel <= maxlevel))
+		{
+			// Use old style to calculate stat values
+			float rellevel = maxlevel == minlevel ? 0 : (float(level - minlevel)) / (maxlevel - minlevel);
 
-    //////////////////////////////////////////////////////////////////////////
-    // Set values
-    //////////////////////////////////////////////////////////////////////////
+			// health
+			uint32 minhealth = std::min(cinfo->MaxLevelHealth, cinfo->MinLevelHealth);
+			uint32 maxhealth = std::max(cinfo->MaxLevelHealth, cinfo->MinLevelHealth);
+			health = uint32(minhealth + uint32(rellevel * (maxhealth - minhealth)));
 
-    // health
-    SetCreateHealth(health);
-    SetMaxHealth(health);
+			// mana
+			uint32 minmana = std::min(cinfo->MaxLevelMana, cinfo->MinLevelMana);
+			uint32 maxmana = std::max(cinfo->MaxLevelMana, cinfo->MinLevelMana);
+			mana = minmana + uint32(rellevel * (maxmana - minmana));
+		}
+		else
+		{
+			sLog.outError("Creature::SelectLevel> Error trying to set level(%u) for creature %s without enough data to do it!", level, GetGuidStr().c_str());
+			// probably wrong
+			health = (cinfo->MaxLevelHealth / cinfo->MaxLevel) * level;
+			mana = (cinfo->MaxLevelMana / cinfo->MaxLevel) * level;
+		}
+	}
 
-    if (percentHealth == 100.0f)
-        SetHealth(health);
-    else
-        SetHealthPercent(percentHealth);
+	health *= _GetHealthMod(rank); // Apply custom config setting
+	if (health < 1)
+		health = 1;
 
-    SetModifierValue(UNIT_MOD_HEALTH, BASE_VALUE, float(health));
+	//////////////////////////////////////////////////////////////////////////
+	// Set values
+	//////////////////////////////////////////////////////////////////////////
 
-    // all power types
-    for (int i = POWER_MANA; i <= POWER_HAPPINESS; ++i)
-    {
-        uint32 maxValue;
+	// health
+	SetCreateHealth(health);
+	SetMaxHealth(health);
+	SetHealth(health);
 
-        switch (i)
-        {
-            case POWER_MANA:        maxValue = mana; break;
-            case POWER_RAGE:        maxValue = 0; break;
-            case POWER_FOCUS:       maxValue = POWER_FOCUS_DEFAULT; break;
-            case POWER_ENERGY:      maxValue = POWER_ENERGY_DEFAULT * cinfo->PowerMultiplier; break;
-            case POWER_HAPPINESS:   maxValue = POWER_HAPPINESS_DEFAULT; break;
-        }
+	SetModifierValue(UNIT_MOD_HEALTH, BASE_VALUE, float(health));
 
-        uint32 value = maxValue;
+	// all power types
+	for (int i = POWER_MANA; i <= POWER_HAPPINESS; ++i)
+	{
+		uint32 maxValue;
 
-        // For non regenerating powers set 0
-        if ((i == POWER_ENERGY || i == POWER_MANA) && !IsRegeneratingPower())
-            value = 0;
+		switch (i)
+		{
+		case POWER_MANA:        maxValue = mana; break;
+		case POWER_RAGE:        maxValue = 0; break;
+		case POWER_FOCUS:       maxValue = POWER_FOCUS_DEFAULT; break;
+		case POWER_ENERGY:      maxValue = POWER_ENERGY_DEFAULT * cinfo->PowerMultiplier; break;
+		case POWER_HAPPINESS:   maxValue = POWER_HAPPINESS_DEFAULT; break;
+		}
 
-        // Mana requires an extra field to be set
-        if (i == POWER_MANA)
-            SetCreateMana(value);
+		uint32 value = maxValue;
 
-        SetMaxPower(Powers(i), maxValue);
-        SetPower(Powers(i), value);
-        SetModifierValue(UnitMods(UNIT_MOD_POWER_START + i), BASE_VALUE, float(value));
-    }
+		// For non regenerating powers set 0
+		if ((i == POWER_ENERGY || i == POWER_MANA) && !IsRegeneratingPower())
+			value = 0;
 
-    // damage
-    float damagemod = _GetDamageMod(rank);
+		// Mana requires an extra field to be set
+		if (i == POWER_MANA)
+			SetCreateMana(value);
 
-    SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, cinfo->MinMeleeDmg * damagemod);
-    SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, cinfo->MaxMeleeDmg * damagemod);
+		SetMaxPower(Powers(i), maxValue);
+		SetPower(Powers(i), value);
+		SetModifierValue(UnitMods(UNIT_MOD_POWER_START + i), BASE_VALUE, float(value));
+	}
 
-    SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, cinfo->MinMeleeDmg * damagemod);
-    SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, cinfo->MaxMeleeDmg * damagemod);
+	// damage
+	float damagemod = _GetDamageMod(rank);
 
-    SetFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, cinfo->MinRangedDmg * damagemod);
-    SetFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, cinfo->MaxRangedDmg * damagemod);
+	SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, cinfo->MinMeleeDmg * damagemod);
+	SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, cinfo->MaxMeleeDmg * damagemod);
 
-    SetModifierValue(UNIT_MOD_ATTACK_POWER, BASE_VALUE, cinfo->MeleeAttackPower * damagemod);
+	SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, cinfo->MinMeleeDmg * damagemod);
+	SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, cinfo->MaxMeleeDmg * damagemod);
+
+	SetFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, cinfo->MinRangedDmg * damagemod);
+	SetFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, cinfo->MaxRangedDmg * damagemod);
+
+	SetModifierValue(UNIT_MOD_ATTACK_POWER, BASE_VALUE, cinfo->MeleeAttackPower * damagemod);
 }
 
 float Creature::_GetHealthMod(int32 Rank)
@@ -1386,6 +1408,7 @@ bool Creature::LoadFromDB(uint32 guidlow, Map* map)
     // checked at creature_template loading
     m_defaultMovementType = MovementGeneratorType(data->movementType);
 
+	map->Add(this);
     AIM_Initialize();
 
     // Creature Linking, Initial load is handled like respawn
@@ -1635,10 +1658,24 @@ bool Creature::IsImmuneToSpell(SpellEntry const* spellInfo, bool castOnSelf)
     if (!spellInfo)
         return false;
 
-    if (!castOnSelf && GetCreatureInfo()->MechanicImmuneMask & (1 << (spellInfo->Mechanic - 1)))
-        return true;
+	if (!castOnSelf)
+	{
+		if (GetCreatureInfo()->MechanicImmuneMask & (1 << (spellInfo->Mechanic - 1)))
+			return true;
+
+		if (GetCreatureInfo()->SchoolImmuneMask & (1 << spellInfo->School))
+			return true;
+	}
 
     return Unit::IsImmuneToSpell(spellInfo, castOnSelf);
+}
+
+bool Creature::IsImmuneToDamage(SpellSchoolMask meleeSchoolMask)
+{
+	if (GetCreatureInfo()->SchoolImmuneMask & meleeSchoolMask)
+		return true;
+
+	return Unit::IsImmuneToDamage(meleeSchoolMask);
 }
 
 bool Creature::IsImmuneToSpellEffect(SpellEntry const* spellInfo, SpellEffectIndex index, bool castOnSelf) const
@@ -1812,7 +1849,8 @@ void Creature::CallAssistance()
         if (GetCreatureInfo()->ExtraFlags & CREATURE_EXTRA_FLAG_NO_CALL_ASSIST)
             return;
 
-        AI()->SendAIEventAround(AI_EVENT_CALL_ASSISTANCE, getVictim(), sWorld.getConfig(CONFIG_UINT32_CREATURE_FAMILY_ASSISTANCE_DELAY), sWorld.getConfig(CONFIG_FLOAT_CREATURE_FAMILY_ASSISTANCE_RADIUS));
+		if(AI())
+			AI()->SendAIEventAround(AI_EVENT_CALL_ASSISTANCE, getVictim(), sWorld.getConfig(CONFIG_UINT32_CREATURE_FAMILY_ASSISTANCE_DELAY), sWorld.getConfig(CONFIG_FLOAT_CREATURE_FAMILY_ASSISTANCE_RADIUS));
     }
 }
 
@@ -2478,10 +2516,6 @@ struct SpawnCreatureInMapsWorker
             if (!pCreature->LoadFromDB(i_guid, map))
             {
                 delete pCreature;
-            }
-            else
-            {
-                map->Add(pCreature);
             }
         }
     }
