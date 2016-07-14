@@ -548,6 +548,12 @@ void Channel::Say(Player* player, const char* text, uint32 lang)
 {
     if (!text)
         return;
+	
+	if (!player->isGameMaster() && player->getLevel() < 15)
+	{
+		player->GetSession()->SendNotification("level too low, u need 15");
+		return;
+	}
 
     ObjectGuid guid = player->GetObjectGuid();
 

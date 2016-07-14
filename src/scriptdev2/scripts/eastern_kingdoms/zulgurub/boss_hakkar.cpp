@@ -67,7 +67,7 @@ struct boss_hakkarAI : public ScriptedAI
 
     void Reset() override
     {
-        m_uiBloodSiphonTimer       = 90000;
+        m_uiBloodSiphonTimer       = 60000;
         m_uiCorruptedBloodTimer    = 25000;
         m_uiCauseInsanityTimer     = 17000;
         m_uiWillOfHakkarTimer      = 17000;
@@ -87,16 +87,33 @@ struct boss_hakkarAI : public ScriptedAI
         // check if the priest encounters are done
         if (m_pInstance)
         {
+			uint32 createheal = m_creature->GetCreateHealth();
+			uint32 reducehell = createheal * 0.1;
             if (m_pInstance->GetData(TYPE_JEKLIK) == DONE)
+			{
                 m_uiAspectOfJeklikTimer = 0;
+				m_creature->SetMaxHealth(m_creature->GetHealth() - reducehell);
+			}
             if (m_pInstance->GetData(TYPE_VENOXIS) == DONE)
+			{
                 m_uiAspectOfVenoxisTimer = 0;
+				m_creature->SetMaxHealth(m_creature->GetHealth() - reducehell);
+			}
             if (m_pInstance->GetData(TYPE_MARLI) == DONE)
+			{
                 m_uiAspectOfMarliTimer = 0;
+				m_creature->SetMaxHealth(m_creature->GetHealth() - reducehell);
+			}
             if (m_pInstance->GetData(TYPE_THEKAL) == DONE)
+			{
                 m_uiAspectOfThekalTimer = 0;
+				m_creature->SetMaxHealth(m_creature->GetHealth() - reducehell);
+			}
             if (m_pInstance->GetData(TYPE_ARLOKK) == DONE)
+			{
                 m_uiAspectOfArlokkTimer = 0;
+				m_creature->SetMaxHealth(m_creature->GetHealth() - reducehell);
+			}
         }
     }
 
@@ -108,7 +125,7 @@ struct boss_hakkarAI : public ScriptedAI
         if (m_uiBloodSiphonTimer < uiDiff)
         {
             if (DoCastSpellIfCan(m_creature, SPELL_BLOOD_SIPHON) == CAST_OK)
-                m_uiBloodSiphonTimer = 90000;
+                m_uiBloodSiphonTimer = 60000;
         }
         else
             m_uiBloodSiphonTimer -= uiDiff;

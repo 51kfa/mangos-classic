@@ -1256,8 +1256,6 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                         case 20473: hurt = 25912; heal = 25914; break;
                         case 20929: hurt = 25911; heal = 25913; break;
                         case 20930: hurt = 25902; heal = 25903; break;
-                        case 27174: hurt = 27176; heal = 27175; break;
-                        case 33072: hurt = 33073; heal = 33074; break;
                         default:
                             sLog.outError("Spell::EffectDummy: Spell %u not handled in HS", m_spellInfo->Id);
                             return;
@@ -1417,6 +1415,16 @@ void Spell::EffectTriggerSpell(SpellEffectIndex eff_idx)
             m_caster->CastSpell(unitTarget, spellId, true);
             return;
         }
+		// Terrordale Haunting Spirit #2, special case because chance is set to 101% in DBC while description is 55%
+		case 23209:
+			if (urand(0, 100) < 55)
+				m_caster->CastSpell(unitTarget, triggered_spell_id, true);
+			return;
+		// Terrordale Haunting Spirit #3, special case because chance is set to 101% in DBC while description is 35%
+		case 23253:
+			if (urand(0, 100) < 35)
+				m_caster->CastSpell(unitTarget, triggered_spell_id, true);
+			return;
         // just skip
         case 23770:                                         // Sayge's Dark Fortune of *
             // not exist, common cooldown can be implemented in scripts if need.
@@ -3709,6 +3717,13 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, 27699, true);
                     return;
                 }
+				case 28352:                                 // Breath of Sargeras
+				{
+					if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+						return;
+					unitTarget->CastSpell(unitTarget, 28342, true);
+					return;
+				}
                 case 28374:                                 // Decimate (Naxxramas: Gluth)
                 {
                     if (!unitTarget)

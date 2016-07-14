@@ -4271,6 +4271,10 @@ void Aura::PeriodicTick()
             if (!pCaster)
                 return;
 
+			if (pCaster->GetTypeId() == TYPEID_PLAYER && target->GetTypeId() == TYPEID_PLAYER)
+				if (target->getFaction() == 35)
+					return;			
+
             if (spellProto->Effect[GetEffIndex()] == SPELL_EFFECT_PERSISTENT_AREA_AURA &&
                     pCaster->SpellHitResult(target, spellProto, false) != SPELL_MISS_NONE)
                 return;
@@ -4371,6 +4375,31 @@ void Aura::PeriodicTick()
             // Check for immune
             if (target->IsImmuneToDamage(GetSpellSchoolMask(spellProto)))
                 return;
+
+			if (spellProto->Id == 24322)
+			{
+				if (target)
+				{
+					uint32 absorb = 0;
+					uint32 resist = 0;
+					uint32 pdamage = 200;
+					CleanDamage cleanDamage = CleanDamage(0, BASE_ATTACK, MELEE_HIT_NORMAL);
+					cleanDamage.damage = 200;
+					pCaster->DealDamageMods(target, pdamage, 0);
+					uint32 procAttacker = PROC_FLAG_ON_DO_PERIODIC; //  | PROC_FLAG_SUCCESSFUL_HARMFUL_SPELL_HIT;
+					uint32 procVictim = PROC_FLAG_ON_TAKE_PERIODIC;// | PROC_FLAG_TAKEN_HARMFUL_SPELL_HIT;
+					SpellPeriodicAuraLogInfo pInfo(this, pdamage, absorb, resist, 0.0f);
+					target->SendPeriodicAuraLog(&pInfo);
+
+					if (pdamage)
+						procVictim |= PROC_FLAG_TAKEN_ANY_DAMAGE;
+
+					target->ProcDamageAndSpell(pCaster, procAttacker, procVictim, PROC_EX_NORMAL_HIT, pdamage, BASE_ATTACK, spellProto);
+					target->DealDamage(pCaster, pdamage, &cleanDamage, DOT, GetSpellSchoolMask(spellProto), spellProto, true);
+					pCaster->DealHeal(target, 1000, spellProto);
+				}
+				break;
+			}
 
             uint32 absorb = 0;
             uint32 resist = 0;

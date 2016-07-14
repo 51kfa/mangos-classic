@@ -4333,6 +4333,13 @@ SpellCastResult Spell::CheckCast(bool strict)
 			}
 		}
 
+		if (m_caster->GetTypeId() == TYPEID_PLAYER
+			&& target->GetTypeId() == TYPEID_PLAYER
+			&& target->getFaction() == 35 
+			&& m_caster->getClass() == CLASS_MAGE
+			&& m_spellInfo->SpellIconID == 225)
+			return SPELL_FAILED_BAD_TARGETS;
+
         // Target must be facing you.
         if ((m_spellInfo->Attributes == (SPELL_ATTR_UNK4 | SPELL_ATTR_NOT_SHAPESHIFT | SPELL_ATTR_UNK18 | SPELL_ATTR_STOP_ATTACK_TARGET)) && !target->HasInArc(M_PI_F, m_caster))
         {
@@ -4343,6 +4350,10 @@ SpellCastResult Spell::CheckCast(bool strict)
         // check if target is in combat
         if (non_caster_target && m_spellInfo->HasAttribute(SPELL_ATTR_EX_NOT_IN_COMBAT_TARGET) && target->isInCombat())
             return SPELL_FAILED_TARGET_AFFECTING_COMBAT;
+
+		// check if target is affected by Spirit of Redemption (Aura: 27827)
+		if (target->HasAuraType(SPELL_AURA_SPIRIT_OF_REDEMPTION))
+			return SPELL_FAILED_BAD_TARGETS;
     }
     // zone check
     uint32 zone, area;

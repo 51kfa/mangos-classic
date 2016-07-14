@@ -413,6 +413,8 @@ bool IsNoStackEx(SpellEntry const* spellInfo_1, SpellEntry const* spellInfo_2)
 			return false;
 		if (spellInfo_1->Id == 28747 || spellInfo_2->Id == 28747)
 			return false;
+		if (spellInfo_1->Id == 24322 || spellInfo_2->Id == 24322)
+			return false;
 	}
 	return true;
 }
@@ -789,7 +791,9 @@ bool IsPositiveEffect(SpellEntry const* spellproto, SpellEffectIndex effIndex)
                     switch (spellproto->Id)
                     {
                         case 13139:                         // net-o-matic special effect
+						case 23182:                         // Mark of Frost
                         case 23445:                         // evil twin
+						case 25040:                         // Mark of Nature
                             return false;
                         // some spells have unclear target modes for selection, so just make effect positive
                         case 27184:
