@@ -369,6 +369,8 @@ set(SRC_GRP_WORLD_HANDLERS
     Weather.h
     World.cpp
     World.h
+    AntiCheat.cpp
+    AntiCheat.h
 )
 
 set(LIBRARY_SRCS
