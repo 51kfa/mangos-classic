@@ -331,7 +331,7 @@ Spell::Spell(Unit* caster, SpellEntry const* info, bool triggered, ObjectGuid or
             if (!IsPositiveTarget(m_spellInfo->EffectImplicitTargetA[j], m_spellInfo->EffectImplicitTargetB[j]))
                 m_canReflect = true;
             else
-                m_canReflect = m_spellInfo->HasAttribute(SPELL_ATTR_EX_NEGATIVE);
+				m_canReflect = m_spellInfo->HasAttribute(SPELL_ATTR_EX_UNK7);
 
             if (m_canReflect)
                 continue;
@@ -2500,7 +2500,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
 SpellCastResult Spell::PreCastCheck(Aura* triggeredByAura /*= nullptr*/)
 {
 	// Prevent casting at cast another spell (ServerSide check)
-	if (!m_IsTriggeredSpell && m_caster->IsNonMeleeSpellCasted(false, true, true))
+	if (!m_IsTriggeredSpell && m_caster->IsNonMeleeSpellCasted(false, true, true) && !m_spellInfo->HasAttribute(SPELL_ATTR_EX4_CAN_CAST_WHILE_CASTING))
 		return SPELL_FAILED_SPELL_IN_PROGRESS;
 
 	SpellCastResult result = CheckCast(true);
@@ -3380,6 +3380,8 @@ void Spell::WriteSpellGoTargets(WorldPacket* data)
         }
         else if (ihit->missCondition == SPELL_MISS_NONE)    // Add only hits
             m_needAliveTargetMask |= ihit->effectMask;
+		else if (IsChanneledSpell(m_spellInfo) && ihit->missCondition == SPELL_MISS_RESIST)
+			m_duration = 0;                                 // cancel aura to avoid visual effect continue
     }
 
     for (GOTargetList::const_iterator ighit = m_UniqueGOTargetInfo.begin(); ighit != m_UniqueGOTargetInfo.end(); ++ighit)
@@ -3710,6 +3712,7 @@ void Spell::TakePower()
     if (m_spellInfo->powerType == POWER_HEALTH)
     {
         m_caster->ModifyHealth(-(int32)m_powerCost);
+		m_caster->SendSpellNonMeleeDamageLog(m_caster, m_spellInfo->Id, m_powerCost, GetSpellSchoolMask(m_spellInfo), 0, 0, false, 0, false);
         return;
     }
 
@@ -5229,7 +5232,7 @@ SpellCastResult Spell::CheckPetCast(Unit* target)
     if (!m_caster->isAlive())
         return SPELL_FAILED_CASTER_DEAD;
 
-    if (m_caster->IsNonMeleeSpellCasted(false))             // prevent spellcast interruption by another spellcast
+	if (m_caster->IsNonMeleeSpellCasted(false) && !m_spellInfo->HasAttribute(SPELL_ATTR_EX4_CAN_CAST_WHILE_CASTING)) // prevent spellcast interruption by another spellcast
         return SPELL_FAILED_SPELL_IN_PROGRESS;
     if (m_caster->isInCombat() && IsNonCombatSpell(m_spellInfo))
         return SPELL_FAILED_AFFECTING_COMBAT;

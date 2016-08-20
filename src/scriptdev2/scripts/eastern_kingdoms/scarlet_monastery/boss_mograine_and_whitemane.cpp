@@ -226,7 +226,7 @@ struct boss_high_inquisitor_whitemaneAI : public ScriptedAI
 
     void Reset() override
     {
-        m_uiWait_Timer            = 7000;
+        m_uiWait_Timer            = 3000;
         m_uiHeal_Timer            = 10000;
         m_uiPowerWordShield_Timer = 15000;
         m_uiHolySmite_Timer       = 4000;

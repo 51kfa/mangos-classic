@@ -62,6 +62,8 @@ void PetAI::MoveInLineOfSight(Unit* u)
             if (m_creature->IsWithinLOSInMap(u))
             {
                 AttackStart(u);
+				if (Unit* owner = m_creature->GetOwner())
+					owner->SetInCombatState(true, u);
                 u->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
             }
         }
@@ -204,7 +206,7 @@ void PetAI::UpdateAI(const uint32 diff)
 			if (!m_creature->hasUnitState(UNIT_STAT_FOLLOW) && !owner->IsWithinDistInMap(m_creature, (PET_FOLLOW_DIST * 2)))
 				m_creature->GetMotionMaster()->MoveFollow(owner, PET_FOLLOW_DIST, PET_FOLLOW_ANGLE);
 			// This is to stop the pet from following you when you're close to each other, to support the above condition.
-			else
+			else if(m_creature->hasUnitState(UNIT_STAT_FOLLOW))
 			{
 				m_creature->GetMotionMaster()->Clear(false);
 				m_creature->GetMotionMaster()->MoveIdle();

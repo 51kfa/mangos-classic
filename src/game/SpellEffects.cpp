@@ -263,7 +263,7 @@ void Spell::EffectInstaKill(SpellEffectIndex /*eff_idx*/)
     data << uint32(m_spellInfo->Id);
     m_caster->SendMessageToSet(&data, true);
 
-    m_caster->DealDamage(unitTarget, unitTarget->GetHealth(), nullptr, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, nullptr, false);
+	m_caster->DealDamage(unitTarget, unitTarget->GetHealth(), nullptr, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, m_spellInfo, false);
 }
 
 void Spell::EffectEnvironmentalDMG(SpellEffectIndex eff_idx)
@@ -470,6 +470,17 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     m_caster->CastSpell(m_caster, spell_id, true, nullptr);
                     return;
                 }
+				case 8344:                                  // Gnomish Universal Remote (ItemID: 7506)
+				{
+					if (m_CastItem && unitTarget)
+					{
+						// 8345 - Control the machine | 8346 = Malfunction the machine (root) | 8347 = Taunt/enrage the machine
+						const uint32 spell_list[3] = { 8345, 8346, 8347 };
+						m_caster->CastSpell(unitTarget, spell_list[urand(0, 2)], true, m_CastItem);
+					}
+
+					return;
+				}
                 case 9976:                                  // Polly Eats the E.C.A.C.
                 {
                     if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
@@ -499,8 +510,8 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 }
                 case 13120:                                 // net-o-matic
                 {
-                    if (!unitTarget)
-                        return;
+					if (!unitTarget || !m_CastItem)
+						return;
 
                     uint32 spell_id = 0;
 
@@ -546,17 +557,14 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 				}
 				case 13180:                                 // Gnomish mind control cap
 				{
-					if (!unitTarget)
-						return;
-
-					uint32 roll = urand(0,99);
-
-					if (roll < 5)                          // 5% victim MC the caster (off-like chance unknown)
-						unitTarget->CastSpell(m_caster, 13181, true, nullptr);
-					else if (roll < 35)                    // 30% fail (off-like chance unknown)
-						return;
-					else
-						AddTriggeredSpell(13181);
+																if (unitTarget && m_CastItem)
+																{
+																	uint32 roll = urand(0, 9);
+																	if (roll == 1 && unitTarget->GetTypeId() == TYPEID_PLAYER)
+																		unitTarget->CastSpell(m_caster, 13181, true, m_CastItem);
+																	else if (roll)
+																		m_caster->CastSpell(unitTarget, 13181, true, m_CastItem);
+																}
 					return;
 				}
 				case 13278:                                // Gnomish Death Ray charging
@@ -882,6 +890,13 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     m_caster->CastSpell(m_caster, 13166, true, m_CastItem);
                     return;
                 }
+				case 23134:                                 // Goblin Bomb Dispenser
+				{
+					if (m_CastItem)
+						m_caster->CastSpell(m_caster, 13258, true, m_CastItem);
+
+					return;
+				}
                 case 23138:                                 // Gate of Shazzrah
                 {
                     if (!unitTarget)
@@ -2033,8 +2048,11 @@ void Spell::SendLoot(ObjectGuid guid, LootType loottype, LockType lockType)
                     return;
 
                 Loot*& loot = gameObjTarget->loot;
-                if (!loot)
-                    loot = new Loot((Player*)m_caster, gameObjTarget, loottype);
+				if (!loot)
+				{
+					loot = new Loot((Player*)m_caster, gameObjTarget, loottype);
+					TakeCastItem();
+				}
                 loot->ShowContentTo((Player*)m_caster);
                 return;
             }
@@ -2047,7 +2065,10 @@ void Spell::SendLoot(ObjectGuid guid, LootType loottype, LockType lockType)
             {
                 Loot*& loot = itemTarget->loot;
                 if (!loot)
-                    loot = new Loot((Player*)m_caster, itemTarget, loottype);
+                {
+					loot = new Loot((Player*)m_caster, itemTarget, loottype);
+					TakeCastItem();
+				}
                 loot->ShowContentTo((Player*)m_caster);
                 return;
             }
@@ -2352,7 +2373,7 @@ void Spell::EffectDispel(SpellEffectIndex eff_idx)
                 if (!holder->IsPositive())
                     positive = false;
                 else
-                    positive = (holder->GetSpellProto()->AttributesEx & SPELL_ATTR_EX_NEGATIVE) == 0;
+					positive = (holder->GetSpellProto()->AttributesEx & SPELL_ATTR_NEGATIVE) == 0;
 
                 // do not remove positive auras if friendly target
                 //               negative auras if non-friendly target
@@ -3129,6 +3150,7 @@ void Spell::EffectSummonPet(SpellEffectIndex eff_idx)
 
     if (m_caster->GetTypeId() == TYPEID_PLAYER)
     {
+		NewSummon->SetByteValue(UNIT_FIELD_BYTES_2, 1, UNIT_BYTE2_FLAG_SUPPORTABLE | UNIT_BYTE2_FLAG_AURAS);
         NewSummon->SavePetToDB(PET_SAVE_AS_CURRENT);
         ((Player*)m_caster)->PetSpellInitialize();
     }

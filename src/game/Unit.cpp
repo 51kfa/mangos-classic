@@ -600,7 +600,7 @@ uint32 Unit::DealDamage(Unit* pVictim, uint32 damage, CleanDamage const* cleanDa
     }
 
     // Get in CombatState
-    if (pVictim != this && damagetype != DOT)
+	if (pVictim != this && damagetype != DOT && (!spellProto || !spellProto->HasAttribute(SPELL_ATTR_EX3_NO_INITIAL_AGGRO)))
     {
         SetInCombatWith(pVictim);
         pVictim->SetInCombatWith(this);
@@ -673,6 +673,8 @@ uint32 Unit::DealDamage(Unit* pVictim, uint32 damage, CleanDamage const* cleanDa
 
             player_tap->SendDirectMessage(&data);
         }
+		else if (GetTypeId() == TYPEID_UNIT && this != pVictim)
+			ProcDamageAndSpell(pVictim, PROC_FLAG_KILL, PROC_FLAG_KILLED, PROC_EX_NONE, 0);
 
         // Reward player, his pets, and group/raid members
         if (player_tap != pVictim)
@@ -831,20 +833,32 @@ uint32 Unit::DealDamage(Unit* pVictim, uint32 damage, CleanDamage const* cleanDa
             }
         }
 
-        // TODO: Store auras by interrupt flag to speed this up.
-        SpellAuraHolderMap& vAuras = pVictim->GetSpellAuraHolderMap();
-        for (SpellAuraHolderMap::const_iterator i = vAuras.begin(), next; i != vAuras.end(); i = next)
-        {
-            const SpellEntry* se = i->second->GetSpellProto();
-            next = i; ++next;
-            if (spellProto && spellProto->Id == se->Id) // Not drop auras added by self
-                continue;
-            if (!se->procFlags && (se->AuraInterruptFlags & AURA_INTERRUPT_FLAG_DAMAGE))
-            {
-                pVictim->RemoveAurasDueToSpell(i->second->GetId());
-                next = vAuras.begin();
-            }
-        }
+		if (damagetype == DIRECT_DAMAGE || damagetype == SPELL_DIRECT_DAMAGE || damagetype == DOT)
+		{
+			int32 auraInterruptFlags = AURA_INTERRUPT_FLAG_DAMAGE;
+			if (damagetype != DOT)
+				auraInterruptFlags = (auraInterruptFlags | AURA_INTERRUPT_FLAG_DIRECT_DAMAGE);
+
+			SpellAuraHolderMap& vInterrupts = pVictim->GetSpellAuraHolderMap();
+			std::vector<uint32> cleanupHolder;
+
+			for (auto aura : vInterrupts)
+			{
+				if (spellProto && spellProto->Id == aura.second->GetId()) // Not drop auras added by self
+					continue;
+
+				const SpellEntry* se = aura.second->GetSpellProto();
+
+				if (!se)
+					continue;
+
+				if (se->AuraInterruptFlags & auraInterruptFlags)
+					cleanupHolder.push_back(aura.second->GetId());
+			}
+
+			for (auto aura : cleanupHolder)
+				pVictim->RemoveAurasDueToSpell(aura);
+		}
 
         if (damagetype != NODAMAGE && damage && pVictim->GetTypeId() == TYPEID_PLAYER)
         {
@@ -2040,6 +2054,7 @@ void Unit::AttackerStateUpdate(Unit* pVictim, WeaponAttackType attType, bool ext
         return;
     }
 
+	RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_MELEE_ATTACK);
     CalcDamageInfo damageInfo;
     CalculateMeleeDamage(pVictim, &damageInfo, attType);
     // Send log damage message to client
@@ -2054,6 +2069,22 @@ void Unit::AttackerStateUpdate(Unit* pVictim, WeaponAttackType attType, bool ext
     else
         DEBUG_FILTER_LOG(LOG_FILTER_COMBAT, "AttackerStateUpdate: (NPC)    %u attacked %u (TypeId: %u) for %u dmg, absorbed %u, blocked %u, resisted %u.",
                          GetGUIDLow(), pVictim->GetGUIDLow(), pVictim->GetTypeId(), damageInfo.damage, damageInfo.absorb, damageInfo.blocked_amount, damageInfo.resist);
+
+	if (Unit* owner = GetCharmerOrOwner())
+	{
+		pVictim->AddThreat(owner);
+		pVictim->SetInCombatWith(owner);
+		owner->SetInCombatWith(pVictim);
+	}
+	for (GuidSet::const_iterator itr = m_guardianPets.begin(); itr != m_guardianPets.end(); ++itr)
+	{
+		if (Unit* pet = (Unit*)GetMap()->GetPet(*itr))
+		{
+			pet->SetInCombatWith(pVictim);
+			pet->AddThreat(pVictim);
+			pVictim->SetInCombatWith(pet);
+		}
+	}
 
     // if damage pVictim call AI reaction
     pVictim->AttackedBy(this);
@@ -3582,20 +3613,8 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolder* holder)
                 continue;
         }
 
-        if (i_spellId == spellId) continue;
-
-        bool is_triggered_by_spell = false;
-        // prevent triggering aura of removing aura that triggered it
-        for (int j = 0; j < MAX_EFFECT_INDEX; ++j)
-            if (i_spellProto->EffectTriggerSpell[j] == spellId)
-                is_triggered_by_spell = true;
-
-        // prevent triggered aura of removing aura that triggering it (triggered effect early some aura of parent spell
-        for (int j = 0; j < MAX_EFFECT_INDEX; ++j)
-            if (spellProto->EffectTriggerSpell[j] == i_spellId)
-                is_triggered_by_spell = true;
-
-        if (is_triggered_by_spell)
+		if (((*i).second->GetTriggeredBy() && (*i).second->GetTriggeredBy()->Id == spellId)
+			|| (holder->GetTriggeredBy() && holder->GetTriggeredBy()->Id == i_spellId))
             continue;
 
         SpellSpecific i_spellId_spec = GetSpellSpecific(i_spellId);
@@ -3658,21 +3677,27 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolder* holder)
         }
 
         // non single (per caster) per target spell specific (possible single spell per target at caster)
-        if (!is_spellSpecPerTargetPerCaster && !is_spellSpecPerTarget && sSpellMgr.IsNoStackSpellDueToSpell(spellId, i_spellId))
+		if (!is_spellSpecPerTargetPerCaster && !is_spellSpecPerTarget && sSpellMgr.IsNoStackSpellDueToSpell(spellProto, i_spellProto))
         {
-            // Its a parent aura (create this aura in ApplyModifier)
-            if ((*i).second->IsInUse())
-            {
-                sLog.outError("SpellAuraHolder (Spell %u) is in process but attempt removed at SpellAuraHolder (Spell %u) adding, need add stack rule for Unit::RemoveNoStackAurasDueToAuraHolder", i->second->GetId(), holder->GetId());
-                continue;
-            }
-            RemoveAurasDueToSpell(i_spellId);
+			SpellEntry const* triggeredBy = holder->GetTriggeredBy();
+			if (triggeredBy && sSpellMgr.IsSpellCanAffectSpell(triggeredBy, i_spellProto)) // check if this spell can be triggered by any talent aura
+				continue;
 
-            if (m_spellAuraHolders.empty())
-                break;
-            else
-                next =  m_spellAuraHolders.begin();
+			if (sSpellMgr.IsNoStackSpellDueToSpell(spellProto, i_spellProto))
+			{
+				// Its a parent aura (create this aura in ApplyModifier)
+				if ((*i).second->IsInUse())
+				{
+					sLog.outError("SpellAuraHolder (Spell %u) is in process but attempt removed at SpellAuraHolder (Spell %u) adding, need add stack rule for Unit::RemoveNoStackAurasDueToAuraHolder", i->second->GetId(), holder->GetId());
+					continue;
+				}
+				RemoveAurasDueToSpell(i_spellId);
 
+				if (m_spellAuraHolders.empty())
+					break;
+				else
+					next = m_spellAuraHolders.begin();
+			}
             continue;
         }
 

@@ -637,7 +637,7 @@ bool Player::Create(uint32 guidlow, const std::string& name, uint8 race, uint8 c
     if (powertype == POWER_RAGE || powertype == POWER_MANA)
         SetByteValue(UNIT_FIELD_BYTES_1, 1, 0xEE);
 
-    SetByteValue(UNIT_FIELD_BYTES_2, 1, UNIT_BYTE2_FLAG_UNK3 | UNIT_BYTE2_FLAG_UNK5);
+	SetByteValue(UNIT_FIELD_BYTES_2, 1, UNIT_BYTE2_FLAG_SUPPORTABLE | UNIT_BYTE2_FLAG_UNK5);
     SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
     SetFloatValue(UNIT_MOD_CAST_SPEED, 1.0f);               // fix cast time showed in spell tooltip on client
 
@@ -2326,6 +2326,8 @@ void Player::GiveLevel(uint32 level)
     // update level to hunter/summon pet
     if (Pet* pet = GetPet())
         pet->SynchronizeLevelWithOwner();
+	
+	SendQuestGiverStatusMultiple();
 }
 
 void Player::UpdateFreeTalentPoints(bool resetIfNeed)
@@ -5641,8 +5643,7 @@ void Player::CheckAreaExploreAndOutdoor()
             if (!spellInfo || !IsNeedCastSpellAtOutdoor(spellInfo) || HasAura(itr->first))
                 continue;
 
-			ShapeshiftForm form = GetShapeshiftForm();
-			if (!(spellInfo->Stances & (1 << (form - 1))))
+			if ((spellInfo->Stances || spellInfo->StancesNot) && !IsNeedCastSpellAtFormApply(spellInfo, GetShapeshiftForm()))
 				continue;
             CastSpell(this, itr->first, true, nullptr);
         }
@@ -11917,6 +11918,8 @@ void Player::RewardQuest(Quest const* pQuest, uint32 reward, Object* questGiver,
     saBounds = sSpellMgr.GetSpellAreaForAreaMapBounds(0);
     for (SpellAreaForAreaMap::const_iterator itr = saBounds.first; itr != saBounds.second; ++itr)
         itr->second->ApplyOrRemoveSpellIfCan(this, zone, area, false);
+	
+	SendQuestGiverStatusMultiple();
 }
 
 void Player::FailQuest(uint32 questId)
@@ -13005,6 +13008,58 @@ void Player::SendQuestUpdateAddCreatureOrGo(Quest const* pQuest, ObjectGuid guid
         SetQuestSlotCounter(log_slot, creatureOrGO_idx, count);
 }
 
+void Player::SendQuestGiverStatusMultiple()
+{
+	uint32 count = 0;
+	WorldPacket data(SMSG_QUESTGIVER_STATUS_MULTIPLE, 4);
+	data << uint32(count);                                  // placeholder
+
+	for (GuidSet::const_iterator itr = m_clientGUIDs.begin(); itr != m_clientGUIDs.end(); ++itr)
+	{
+		if (itr->IsAnyTypeCreature())
+		{
+			// need also pet quests case support
+			Creature* questgiver = GetMap()->GetAnyTypeCreature(*itr);
+
+			if (!questgiver || questgiver->IsHostileTo(this))
+				continue;
+
+			if (!questgiver->HasFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER))
+				continue;
+
+			uint8 dialogStatus = sScriptMgr.GetDialogStatus(this, questgiver);
+
+			if (dialogStatus == DIALOG_STATUS_UNDEFINED)
+				dialogStatus = GetSession()->getDialogStatus(this, questgiver, DIALOG_STATUS_NONE);
+
+			data << questgiver->GetObjectGuid();
+			data << uint8(dialogStatus);
+			++count;
+		}
+		else if (itr->IsGameObject())
+		{
+			GameObject* questgiver = GetMap()->GetGameObject(*itr);
+
+			if (!questgiver)
+				continue;
+
+			if (questgiver->GetGoType() != GAMEOBJECT_TYPE_QUESTGIVER)
+				continue;
+
+			uint8 dialogStatus = sScriptMgr.GetDialogStatus(this, questgiver);
+
+			if (dialogStatus == DIALOG_STATUS_UNDEFINED)
+				dialogStatus = GetSession()->getDialogStatus(this, questgiver, DIALOG_STATUS_NONE);
+
+			data << questgiver->GetObjectGuid();
+			data << uint8(dialogStatus);
+			++count;
+		}
+	}
+	data.put<uint32>(0, count);                             // write real count
+	GetSession()->SendPacket(&data);
+}
+
 /*********************************************************/
 /***                   LOAD SYSTEM                     ***/
 /*********************************************************/
@@ -13125,7 +13180,7 @@ bool Player::LoadFromDB(ObjectGuid guid, SqlQueryHolder* holder)
     uint8 gender = fields[5].GetUInt8() & 0x01;             // allowed only 1 bit values male/female cases (for fit drunk gender part)
     SetByteValue(UNIT_FIELD_BYTES_0, 2, gender);            // gender
 
-    SetByteValue(UNIT_FIELD_BYTES_2, 1, UNIT_BYTE2_FLAG_UNK3 | UNIT_BYTE2_FLAG_UNK5);
+	SetByteValue(UNIT_FIELD_BYTES_2, 1, UNIT_BYTE2_FLAG_SUPPORTABLE | UNIT_BYTE2_FLAG_UNK5);
 
     SetUInt32Value(UNIT_FIELD_LEVEL, fields[6].GetUInt8());
     SetUInt32Value(PLAYER_XP, fields[7].GetUInt32());
@@ -14207,6 +14262,7 @@ void Player::_LoadGroup(QueryResult* result)
             SetGroup(group, subgroup);
         }
     }
+	UpdateGroupLeaderFlag();
 }
 
 void Player::_LoadBoundInstances(QueryResult* result)
@@ -14786,8 +14842,8 @@ void Player::_SaveAuras()
         // save singleTarget auras if self cast.
         bool selfCastHolder = holder->GetCasterGuid() == GetObjectGuid();
         TrackedAuraType trackedType = holder->GetTrackedAuraType();
-        if (!holder->IsPassive() && !IsChanneledSpell(holder->GetSpellProto()) &&
-                (trackedType == TRACK_AURA_TYPE_NOT_TRACKED || (trackedType == TRACK_AURA_TYPE_SINGLE_TARGET && selfCastHolder)))
+        if (!holder->IsPassive() && !IsChanneledSpell(holder->GetSpellProto()) 
+		    /*&& (trackedType == TRACK_AURA_TYPE_NOT_TRACKED || (trackedType == TRACK_AURA_TYPE_SINGLE_TARGET && selfCastHolder))*/)
         {
             int32  damage[MAX_EFFECT_INDEX];
             uint32 periodicTime[MAX_EFFECT_INDEX];
@@ -15531,13 +15587,13 @@ void Player::Whisper(const std::string& text, uint32 language, ObjectGuid receiv
     ChatHandler::BuildChatPacket(data, CHAT_MSG_WHISPER, text.c_str(), Language(language), GetChatTag(), GetObjectGuid(), GetName());
     rPlayer->GetSession()->SendPacket(&data);
 
-    // not send confirmation for addon messages
-    if (language != LANG_ADDON)
-    {
-        data.clear();
-        ChatHandler::BuildChatPacket(data, CHAT_MSG_WHISPER_INFORM, text.c_str(), Language(language), CHAT_TAG_NONE, rPlayer->GetObjectGuid());
-        GetSession()->SendPacket(&data);
-    }
+	// do not send confirmations, afk, dnd or system notifications for addon messages
+	if (language == LANG_ADDON)
+		return;
+
+	data.clear();
+	ChatHandler::BuildChatPacket(data, CHAT_MSG_WHISPER_INFORM, text.c_str(), Language(language), CHAT_TAG_NONE, rPlayer->GetObjectGuid());
+	GetSession()->SendPacket(&data);
 
     if (!isAcceptWhispers())
     {
@@ -15546,10 +15602,13 @@ void Player::Whisper(const std::string& text, uint32 language, ObjectGuid receiv
     }
 
     // announce afk or dnd message
-    if (rPlayer->isAFK())
-        ChatHandler(this).PSendSysMessage(LANG_PLAYER_AFK, rPlayer->GetName(), rPlayer->autoReplyMsg.c_str());
-    else if (rPlayer->isDND())
-        ChatHandler(this).PSendSysMessage(LANG_PLAYER_DND, rPlayer->GetName(), rPlayer->autoReplyMsg.c_str());
+	if (rPlayer->isAFK() || rPlayer->isDND())
+	{
+		const ChatMsg msgtype = rPlayer->isAFK() ? CHAT_MSG_AFK : CHAT_MSG_DND;
+		data.clear();
+		ChatHandler::BuildChatPacket(data, msgtype, rPlayer->autoReplyMsg.c_str(), LANG_UNIVERSAL, CHAT_TAG_NONE, rPlayer->GetObjectGuid());
+		GetSession()->SendPacket(&data);
+	}
 }
 
 void Player::PetSpellInitialize()
@@ -18789,4 +18848,15 @@ void Player::DoInteraction(ObjectGuid const& interactObjGuid)
 		RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_USE);
 	}
 	SendForcedObjectUpdate();
+}
+void Player::UpdateGroupLeaderFlag(const bool remove /*= false*/)
+{
+	const Group* group = GetGroup();
+	if (HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_GROUP_LEADER))
+	{
+		if (remove || !group || group->GetLeaderGuid() != GetObjectGuid())
+			RemoveFlag(PLAYER_FLAGS, PLAYER_FLAGS_GROUP_LEADER);
+	}
+	else if (!remove && group && group->GetLeaderGuid() == GetObjectGuid())
+		SetFlag(PLAYER_FLAGS, PLAYER_FLAGS_GROUP_LEADER);
 }
